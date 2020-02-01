@@ -1,3 +1,4 @@
+// assignment and lookup
 let x = 5;
 let y = 17;
 print(y - x);
