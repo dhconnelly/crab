@@ -1,0 +1,7 @@
+fn f(x, y) {
+  let z = x * x;
+  return y / 2 - z + 1;
+}
+
+let result = f(2, 3);
+print(result);
