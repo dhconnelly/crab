@@ -1,5 +1,3 @@
-// arrays and maps and their methods
-// string operations
 // loops and iteration
 fn readline() {
   let line = "";

@@ -1,0 +1,12 @@
+let food = ["pasta", "apples", "walnuts", "salad"];
+let drinks = ["wine", "water", "coffee"];
+let ages = ["18", "21", "35"];
+let things = {
+  "food": food,
+  "drinks": drinks,
+  "ages": "ages",
+  "valid": 1 + 2 == 4 * 7 - 25,
+};
+
+print(things);
+print(things["valid"]);
