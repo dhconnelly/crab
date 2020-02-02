@@ -58,10 +58,25 @@ impl<'a> Scanner<'a> {
         self.peek().is_none()
     }
 
+    fn peek_is(&mut self, ch: char) -> bool {
+        match self.peek() {
+            None => false,
+            Some(x) => x == ch,
+        }
+    }
+
     fn err(&self, typ: ScanErrType) -> ScanError {
         ScanError {
             line: self.line,
             typ,
+        }
+    }
+
+    fn emit1(&self, typ: TokenType, i: usize) -> Token<'a> {
+        Token {
+            typ,
+            text: &self.text[i..i + 1],
+            line: self.line,
         }
     }
 
@@ -113,41 +128,37 @@ impl<'a> Scanner<'a> {
         self.emit(Int, text)
     }
 
+    fn eq(&mut self, from: usize) -> Result<Token<'a>, ScanError> {
+        self.eat(EqEq, '=')?;
+        Ok(self.emit(EqEq, self.text(from, from + 2)))
+    }
+
+    fn comment(&mut self, from: usize) {
+        self.eat_while(from, |ch| ch != '\n');
+    }
+
     fn scan(&mut self) -> Result<Token<'a>, ScanError> {
         loop {
             if self.at_end() {
-                let text = self.text(self.text.len(), self.text.len());
-                let tok = self.emit(EOF, text);
-                return Ok(tok);
+                return Ok(self.emit(EOF, ""));
             }
-            let tok = match self.chars.next().unwrap() {
-                (_, '\n') => {
-                    self.line += 1;
-                    continue;
-                }
-                (_, x) if x.is_whitespace() => continue,
-                (i, x) if x.is_alphabetic() => self.ident(i),
-                (i, x) if x.is_numeric() => self.int(i),
-                (i, '(') => self.emit(LeftParen, self.text(i, i + 1)),
-                (i, ')') => self.emit(RightParen, self.text(i, i + 1)),
-                (i, ';') => self.emit(Semicolon, self.text(i, i + 1)),
-                (i, '=') => {
-                    self.eat(EqEq, '=')?;
-                    self.emit(EqEq, self.text(i, i + 2))
-                }
-                (i, '*') => self.emit(Star, self.text(i, i + 1)),
-                (i, '/') => {
-                    if self.peek().is_some() && self.peek().unwrap() == '/' {
-                        self.eat_while(i, |ch| ch != '\n');
-                        continue;
-                    }
-                    self.emit(Slash, self.text(i, i + 1))
-                }
-                (i, '+') => self.emit(Plus, self.text(i, i + 1)),
-                (i, '-') => self.emit(Minus, self.text(i, i + 1)),
-                (_, x) => return Err(self.err(BadToken(x))),
-            };
-            return Ok(tok);
+            let (i, ch) = self.chars.next().unwrap();
+            match ch {
+                '\n' => self.line += 1,
+                '(' => return Ok(self.emit1(LeftParen, i)),
+                ')' => return Ok(self.emit1(RightParen, i)),
+                ';' => return Ok(self.emit1(Semicolon, i)),
+                '=' => return self.eq(i),
+                '*' => return Ok(self.emit1(Star, i)),
+                '/' if self.peek_is('/') => self.comment(i),
+                '/' => return Ok(self.emit1(Slash, i)),
+                '+' => return Ok(self.emit1(Plus, i)),
+                '-' => return Ok(self.emit1(Minus, i)),
+                x if x.is_whitespace() => continue,
+                x if x.is_alphabetic() => return Ok(self.ident(i)),
+                x if x.is_numeric() => return Ok(self.int(i)),
+                x => return Err(self.err(BadToken(x))),
+            }
         }
     }
 }
