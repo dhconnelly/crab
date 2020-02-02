@@ -2,6 +2,7 @@ use crate::token::{Token, TokenType, TokenType::*};
 use std::error;
 use std::fmt;
 use std::iter::Peekable;
+use std::result;
 use std::str::CharIndices;
 
 #[derive(Debug)]
@@ -35,6 +36,8 @@ impl fmt::Display for ScanError {
     }
 }
 
+type Result<T> = result::Result<T, ScanError>;
+
 struct Scanner<'a> {
     text: &'a str,
     chars: Peekable<CharIndices<'a>>,
@@ -43,11 +46,9 @@ struct Scanner<'a> {
 
 impl<'a> Scanner<'a> {
     fn new(text: &'a str) -> Scanner<'a> {
-        Scanner {
-            text,
-            chars: text.char_indices().peekable(),
-            line: 1,
-        }
+        let chars = text.char_indices().peekable();
+        let line = 1;
+        Scanner { text, chars, line }
     }
 
     fn peek(&mut self) -> Option<char> {
@@ -66,41 +67,17 @@ impl<'a> Scanner<'a> {
     }
 
     fn err(&self, typ: ScanErrType) -> ScanError {
-        ScanError {
-            line: self.line,
-            typ,
-        }
+        let line = self.line;
+        ScanError { line, typ }
     }
 
     fn emit1(&self, typ: TokenType, i: usize) -> Token<'a> {
-        Token {
-            typ,
-            text: &self.text[i..i + 1],
-            line: self.line,
-        }
+        self.emit(typ, &self.text[i..i + 1])
     }
 
     fn emit(&self, typ: TokenType, text: &'a str) -> Token<'a> {
-        Token {
-            typ,
-            text,
-            line: self.line,
-        }
-    }
-
-    fn text(&self, from: usize, until: usize) -> &'a str {
-        &self.text[from..until]
-    }
-
-    fn eat(&mut self, want: TokenType, ch: char) -> Result<(), ScanError> {
-        match self.peek() {
-            None => Err(self.err(EarlyEOF { want })),
-            Some(x) if x == ch => {
-                self.chars.next();
-                Ok(())
-            }
-            Some(x) => Err(self.err(TokenMismatch { want, got: x })),
-        }
+        let line = self.line;
+        Token { typ, text, line }
     }
 
     fn eat_while(&mut self, from: usize, f: impl Fn(char) -> bool) -> &'a str {
@@ -128,16 +105,16 @@ impl<'a> Scanner<'a> {
         self.emit(Int, text)
     }
 
-    fn eq(&mut self, from: usize) -> Result<Token<'a>, ScanError> {
-        self.eat(EqEq, '=')?;
-        Ok(self.emit(EqEq, self.text(from, from + 2)))
+    fn eq(&mut self, from: usize) -> Token<'a> {
+        self.chars.next();
+        self.emit(EqEq, &self.text[from..from + 2])
     }
 
     fn comment(&mut self, from: usize) {
         self.eat_while(from, |ch| ch != '\n');
     }
 
-    fn scan(&mut self) -> Result<Token<'a>, ScanError> {
+    fn scan(&mut self) -> Result<Token<'a>> {
         loop {
             if self.at_end() {
                 return Ok(self.emit(EOF, ""));
@@ -148,7 +125,7 @@ impl<'a> Scanner<'a> {
                 '(' => return Ok(self.emit1(LeftParen, i)),
                 ')' => return Ok(self.emit1(RightParen, i)),
                 ';' => return Ok(self.emit1(Semicolon, i)),
-                '=' => return self.eq(i),
+                '=' if self.peek_is('=') => return Ok(self.eq(i)),
                 '*' => return Ok(self.emit1(Star, i)),
                 '/' if self.peek_is('/') => self.comment(i),
                 '/' => return Ok(self.emit1(Slash, i)),
@@ -163,7 +140,7 @@ impl<'a> Scanner<'a> {
     }
 }
 
-pub fn scan<'a>(text: &'a str) -> Result<Vec<Token<'a>>, ScanError> {
+pub fn scan<'a>(text: &'a str) -> Result<Vec<Token<'a>>> {
     let mut scanner = Scanner::new(text);
     let mut toks: Vec<Token<'a>> = Vec::new();
     loop {
