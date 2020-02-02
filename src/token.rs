@@ -1,6 +1,8 @@
 #[derive(Debug, PartialEq)]
 pub enum TokenType {
     EOF,
+    Ident,
+    Int,
     Print,
     LeftParen,
     RightParen,

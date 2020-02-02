@@ -13,11 +13,11 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let path = env::args().skip(1).next().ok_or("Usage: crab <filename>")?;
     let text = fs::read_to_string(&path)?;
     let toks = scanner::scan(&text)?;
-    println!("toks: {:?}", toks);
+    println!("toks: {:#?}", toks);
     let tree = parser::parse(&toks)?;
-    println!("tree: {:?}", tree);
+    println!("tree: {:#?}", tree);
     let code = compiler::compile(&tree)?;
-    println!("code: {:?}", code);
+    println!("code: {:#?}", code);
     let result = vm::execute(&code)?;
     println!("{}", result);
     Ok(())

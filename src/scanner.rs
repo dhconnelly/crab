@@ -65,12 +65,16 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn emit(&self, typ: TokenType, from: usize, until: usize) -> Token<'a> {
+    fn emit(&self, typ: TokenType, text: &'a str) -> Token<'a> {
         Token {
             typ,
-            text: &self.text[from..until],
+            text,
             line: self.line,
         }
+    }
+
+    fn text(&self, from: usize, until: usize) -> &'a str {
+        &self.text[from..until]
     }
 
     fn eat(&mut self, want: TokenType, ch: char) -> Result<(), ScanError> {
@@ -84,14 +88,36 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn ident(&mut self, from: usize) -> Result<Token<'a>, ScanError> {
-        panic!();
+    fn eat_while(&mut self, from: usize, f: impl Fn(char) -> bool) -> &'a str {
+        while !self.at_end() && f(self.peek().unwrap()) {
+            self.chars.next().unwrap();
+        }
+        let until = match self.chars.peek() {
+            None => self.text.len(),
+            Some((i, _)) => *i,
+        };
+        &self.text[from..until]
+    }
+
+    fn ident(&mut self, from: usize) -> Token<'a> {
+        let text = self.eat_while(from, |ch| ch.is_alphanumeric());
+        let typ = match text {
+            "print" => Print,
+            ident => Ident,
+        };
+        self.emit(typ, text)
+    }
+
+    fn int(&mut self, from: usize) -> Token<'a> {
+        let text = self.eat_while(from, |ch| ch.is_numeric());
+        self.emit(Int, text)
     }
 
     fn scan(&mut self) -> Result<Token<'a>, ScanError> {
         loop {
             if self.at_end() {
-                let tok = self.emit(EOF, self.text.len(), self.text.len());
+                let text = self.text(self.text.len(), self.text.len());
+                let tok = self.emit(EOF, text);
                 return Ok(tok);
             }
             let tok = match self.chars.next().unwrap() {
@@ -100,18 +126,25 @@ impl<'a> Scanner<'a> {
                     continue;
                 }
                 (_, x) if x.is_whitespace() => continue,
-                (i, x) if x.is_alphabetic() => self.ident(i)?,
-                (i, '(') => self.emit(LeftParen, i, i + 1),
-                (i, ')') => self.emit(RightParen, i, i + 1),
-                (i, ';') => self.emit(Semicolon, i, i + 1),
+                (i, x) if x.is_alphabetic() => self.ident(i),
+                (i, x) if x.is_numeric() => self.int(i),
+                (i, '(') => self.emit(LeftParen, self.text(i, i + 1)),
+                (i, ')') => self.emit(RightParen, self.text(i, i + 1)),
+                (i, ';') => self.emit(Semicolon, self.text(i, i + 1)),
                 (i, '=') => {
                     self.eat(EqEq, '=')?;
-                    self.emit(EqEq, i, i + 2)
+                    self.emit(EqEq, self.text(i, i + 2))
                 }
-                (i, '*') => self.emit(Star, i, i + 1),
-                (i, '/') => self.emit(Slash, i, i + 1),
-                (i, '+') => self.emit(Plus, i, i + 1),
-                (i, '-') => self.emit(Minus, i, i + 1),
+                (i, '*') => self.emit(Star, self.text(i, i + 1)),
+                (i, '/') => {
+                    if self.peek().is_some() && self.peek().unwrap() == '/' {
+                        self.eat_while(i, |ch| ch != '\n');
+                        continue;
+                    }
+                    self.emit(Slash, self.text(i, i + 1))
+                }
+                (i, '+') => self.emit(Plus, self.text(i, i + 1)),
+                (i, '-') => self.emit(Minus, self.text(i, i + 1)),
                 (_, x) => return Err(self.err(BadToken(x))),
             };
             return Ok(tok);

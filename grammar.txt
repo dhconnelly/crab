@@ -1,0 +1,10 @@
+<program> ::= <stmt>* ;
+<stmt> ::= <comment> | <expr> ";" | "print" <expr> ";" ;
+<comment> ::= "/" "/" .* "\n" ;
+<expr> ::= <ident> | <int> | <unary_expr> | <binary_expr> ;
+<ident> ::= \w(\w\d)+ ;
+<int> ::= \d+ ;
+<binary_expr> ::= <expr> <binary_op> <expr> ;
+<binary_op> ::= "==" | "*" | "/" | "+" | "-" ;
+<unary_expr> ::= <unary_op> <expr> ;
+<unary_op> ::= "-" ;
