@@ -1,5 +1,6 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TokenType {
+    EOF,
     Print,
     LeftParen,
     RightParen,
@@ -12,8 +13,8 @@ pub enum TokenType {
 }
 
 #[derive(Debug)]
-pub struct Token {
-    typ: TokenType,
-    text: String,
-    line: usize,
+pub struct Token<'a> {
+    pub typ: TokenType,
+    pub text: &'a str,
+    pub line: usize,
 }
