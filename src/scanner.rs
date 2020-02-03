@@ -5,7 +5,7 @@ use std::iter::Peekable;
 use std::result;
 use std::str::CharIndices;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum ScanErrType {
     BadToken(char),
     TokenMismatch { want: TokenType, got: char },
@@ -13,7 +13,7 @@ pub enum ScanErrType {
 }
 use ScanErrType::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ScanError {
     pub typ: ScanErrType,
     pub line: usize,

@@ -5,8 +5,7 @@ pub struct Program {
 
 #[derive(Debug)]
 pub enum Stmt {
-    Expr(Expr),
-    Print(Expr),
+    PrintStmt(Expr),
 }
 
 #[derive(Debug)]
