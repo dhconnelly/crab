@@ -12,9 +12,9 @@ use std::fs;
 fn main() -> Result<(), Box<dyn error::Error>> {
     let path = env::args().skip(1).next().ok_or("Usage: crab <filename>")?;
     let text = fs::read_to_string(&path)?;
-    let toks = scanner::scan(&text)?;
+    let toks = scanner::scan(&text).collect::<Result<Vec<_>, _>>()?;
     println!("toks: {:#?}", toks);
-    let tree = parser::parse(&toks)?;
+    let tree = parser::parse(toks.into_iter())?;
     println!("tree: {:#?}", tree);
     let code = compiler::compile(&tree)?;
     println!("code: {:#?}", code);

@@ -140,15 +140,23 @@ impl<'a> Scanner<'a> {
     }
 }
 
-pub fn scan<'a>(text: &'a str) -> Result<Vec<Token<'a>>> {
-    let mut scanner = Scanner::new(text);
-    let mut toks: Vec<Token<'a>> = Vec::new();
-    loop {
-        let tok: Token<'a> = scanner.scan()?;
-        toks.push(tok);
-        if toks.last().unwrap().typ == EOF {
-            break;
+pub struct Tokens<'a> {
+    scanner: Scanner<'a>,
+}
+
+impl<'a> Iterator for Tokens<'a> {
+    type Item = Result<Token<'a>>;
+
+    fn next(&mut self) -> Option<Result<Token<'a>>> {
+        if self.scanner.at_end() {
+            None
+        } else {
+            Some(self.scanner.scan())
         }
     }
-    Ok(toks)
+}
+
+pub fn scan<'a>(text: &'a str) -> Tokens<'a> {
+    let scanner = Scanner::new(text);
+    Tokens { scanner }
 }
