@@ -1,3 +1,5 @@
-pub fn execute(code: &[u8]) -> Result<String, String> {
+use crate::code::Instr;
+
+pub fn execute(_code: &[Instr]) -> Result<String, String> {
     Err("not implemented".to_string())
 }

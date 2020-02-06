@@ -21,12 +21,12 @@ pub enum Expr {
 }
 
 impl Expr {
-    pub fn binary(op: BinaryOp, left: Box<Expr>, right: Box<Expr>) -> Self {
-        Self::BinaryExpr { op, left, right }
+    pub fn binary(op: BinaryOp, left: Box<Expr>, right: Box<Expr>) -> Expr {
+        Expr::BinaryExpr { op, left, right }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum BinaryOp {
     EqEq,
     Star,
@@ -35,7 +35,7 @@ pub enum BinaryOp {
     Minus,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum UnaryOp {
     Minus,
 }

@@ -1,6 +1,6 @@
 // algebraic and logical expressions
 // int and boolean types
 // identifiers and built-in function calls
-print(5 * (-4 / 2) + (7 - 3) == 4 == false);
+print(5 * (-4 / 2) + (7 - 3) == 4);
 
-print(foo + bar / (-foo - --bar) + 9);
+print(19 + -7 / (-0 - --14) + 9);
