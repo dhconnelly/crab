@@ -1,7 +1,7 @@
 <program> ::= <stmt>* ;
 <stmt> ::= <comment> | "print" <expr> ";" ;
 <comment> ::= "/" "/" .* "\n" ;
-<expr> ::= <ident> | <int> | <unary_expr> | <binary_expr> ;
+<expr> ::= <ident> | <int> | <unary_expr> | <binary_expr> | '(' <expr> ')';
 <ident> ::= \w(\w\d)+ ;
 <int> ::= \d+ ;
 <binary_expr> ::= <expr> <binary_op> <expr> ;

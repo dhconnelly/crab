@@ -14,8 +14,6 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let text = fs::read_to_string(&path)?;
 
     let toks = scanner::scan(&text).collect::<Result<Vec<_>, _>>()?;
-    println!("toks: {:#?}", toks);
-
     let tree = parser::parse(scanner::scan(&text))?;
     println!("tree: {:#?}", tree);
 

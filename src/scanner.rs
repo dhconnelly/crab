@@ -8,8 +8,6 @@ use std::str::CharIndices;
 #[derive(Debug, Clone, Copy)]
 pub enum ScanErrType {
     BadToken(char),
-    TokenMismatch { want: TokenType, got: char },
-    EarlyEOF { want: TokenType },
 }
 use ScanErrType::*;
 
@@ -29,8 +27,6 @@ impl fmt::Display for ScanError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let msg = match &self.typ {
             BadToken(x) => format!("bad token: {}", x),
-            TokenMismatch { want, got } => format!("want {:?}, got {}", want, got),
-            EarlyEOF { want } => format!("unexpected EOF, want {:?}", want),
         };
         write!(f, "scanner: line {}: {}", self.line, msg)
     }
@@ -95,7 +91,7 @@ impl<'a> Scanner<'a> {
         let text = self.eat_while(from, |ch| ch.is_alphanumeric());
         let typ = match text {
             "print" => Print,
-            ident => Ident,
+            _ => Ident,
         };
         self.emit(typ, text)
     }

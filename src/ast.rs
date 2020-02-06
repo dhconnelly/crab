@@ -11,16 +11,19 @@ pub enum Stmt {
 #[derive(Debug)]
 pub enum Expr {
     Ident(String),
-    IntLit(i32),
-    UnaryExpr(UnaryExpr),
-    BinaryExpr(BinaryExpr),
+    Int(i32),
+    UnaryExpr(UnaryOp, Box<Expr>),
+    BinaryExpr {
+        op: BinaryOp,
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
 }
 
-#[derive(Debug)]
-pub struct BinaryExpr {
-    op: BinaryOp,
-    left: Box<Expr>,
-    right: Box<Expr>,
+impl Expr {
+    pub fn binary(op: BinaryOp, left: Box<Expr>, right: Box<Expr>) -> Self {
+        Self::BinaryExpr { op, left, right }
+    }
 }
 
 #[derive(Debug)]
@@ -30,12 +33,6 @@ pub enum BinaryOp {
     Slash,
     Plus,
     Minus,
-}
-
-#[derive(Debug)]
-pub struct UnaryExpr {
-    op: UnaryOp,
-    right: Box<Expr>,
 }
 
 #[derive(Debug)]
