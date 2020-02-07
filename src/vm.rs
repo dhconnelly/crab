@@ -1,6 +1,4 @@
 use crate::code::Instr;
-use std::convert;
-use std::convert::TryInto;
 use std::error;
 use std::fmt;
 use std::result;
@@ -8,9 +6,15 @@ use std::result;
 #[derive(Debug)]
 pub enum ExecutionError {
     StackEmptyErr,
-    TypeMismatch { want: Type, got: Type },
+    TypeMismatch { want: Type, got: TypedValue },
 }
 use ExecutionError::*;
+
+impl ExecutionError {
+    fn type_mismatch(want: Type, got: TypedValue) -> ExecutionError {
+        TypeMismatch { want, got }
+    }
+}
 
 impl fmt::Display for ExecutionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -27,21 +31,30 @@ impl error::Error for ExecutionError {
 type Result<T> = result::Result<T, ExecutionError>;
 
 #[derive(Debug)]
-enum Type {
+pub enum Type {
     Int,
     Bool,
 }
 
 #[derive(Debug)]
-enum Value {
+pub enum Value {
     Int(i32),
     Bool(bool),
 }
 
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Int(x) => write!(f, "{}", x),
+            Value::Bool(x) => write!(f, "{}", x),
+        }
+    }
+}
+
 #[derive(Debug)]
-struct TypedValue {
-    typ: Type,
-    val: Value,
+pub struct TypedValue {
+    pub typ: Type,
+    pub val: Value,
 }
 
 impl TypedValue {
@@ -51,34 +64,21 @@ impl TypedValue {
             val: Value::Int(x),
         }
     }
-}
 
-impl convert::TryFrom<TypedValue> for i32 {
-    type Error = ExecutionError;
-
-    fn try_from(val: TypedValue) -> Result<i32> {
-        if let Value::Int(x) = val.val {
-            Ok(x)
-        } else {
-            Err(ExecutionError::TypeMismatch {
-                want: Type::Int,
-                got: val.typ,
-            })
+    fn bool(x: bool) -> TypedValue {
+        TypedValue {
+            typ: Type::Bool,
+            val: Value::Bool(x),
         }
     }
 }
 
-impl convert::TryFrom<TypedValue> for bool {
-    type Error = ExecutionError;
-
-    fn try_from(val: TypedValue) -> Result<bool> {
-        if let Value::Bool(x) = val.val {
+impl TypedValue {
+    fn as_int(self) -> Result<i32> {
+        if let Value::Int(x) = self.val {
             Ok(x)
         } else {
-            Err(ExecutionError::TypeMismatch {
-                want: Type::Bool,
-                got: val.typ,
-            })
+            Err(ExecutionError::type_mismatch(Type::Int, self))
         }
     }
 }
@@ -98,32 +98,77 @@ impl VM<'_> {
         }
     }
 
-    fn pop_val<T>(&mut self) -> Result<T> {
+    fn at_end(&self) -> bool {
+        self.pc >= self.code.len()
+    }
+
+    fn pop_val(&mut self) -> Result<TypedValue> {
         let top = self.stack.pop();
         match top {
             None => Err(StackEmptyErr),
-            Some(val) => Ok(val.try_into()?),
+            Some(val) => Ok(val),
         }
+    }
+
+    fn pop_int(&mut self) -> Result<i32> {
+        self.pop_val()?.as_int()
     }
 
     fn step(&mut self) -> Result<()> {
         use Instr::*;
-        let instr = self.code[self.pc];
+        let instr = &self.code[self.pc];
         match instr {
-            PushInt(val) => self.stack.push(TypedValue::int(val)),
-            Negate => self.stack.push(TypedValue::int(-self.pop_val()?)),
-            Add => panic!("not implemented"),
-            Sub => panic!("not implemented"),
-            Mul => panic!("not implemented"),
-            Div => panic!("not implemented"),
-            Eq => panic!("not implemented"),
-            Print => panic!("not implemented"),
+            PushInt(val) => self.stack.push(TypedValue::int(*val)),
+
+            Negate => {
+                let val = TypedValue::int(-self.pop_int()?);
+                self.stack.push(val);
+            }
+
+            Add => {
+                let right = self.pop_int()?;
+                let left = self.pop_int()?;
+                self.stack.push(TypedValue::int(left + right));
+            }
+
+            Sub => {
+                let right = self.pop_int()?;
+                let left = self.pop_int()?;
+                self.stack.push(TypedValue::int(left + right));
+            }
+
+            Mul => {
+                let right = self.pop_int()?;
+                let left = self.pop_int()?;
+                self.stack.push(TypedValue::int(left + right));
+            }
+
+            Div => {
+                let right = self.pop_int()?;
+                let left = self.pop_int()?;
+                self.stack.push(TypedValue::int(left + right));
+            }
+
+            Eq => {
+                let right = self.pop_int()?;
+                let left = self.pop_int()?;
+                self.stack.push(TypedValue::bool(left == right));
+            }
+
+            Print => {
+                let val = self.pop_val()?;
+                println!("{}", val.val);
+            }
         }
+        self.pc += 1;
         Ok(())
     }
 
     fn run(&mut self) -> Result<()> {
-        self.step()
+        while !self.at_end() {
+            self.step()?;
+        }
+        Ok(())
     }
 }
 
