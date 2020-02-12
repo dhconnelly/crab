@@ -1,14 +1,8 @@
-// conditionals
-// recursion
-fn fib(n) {
-  if n <= 1 {
-    return n;
+if (5 - 2 * 10 == 0) {
+  print(false);
+} else {
+  if (5 == 6 - 1) {
+    print(true);
   }
-  return fib(n-1) + fib(n-2);
+  print(-11);
 }
-
-print(fib(-1));
-print(fib(0));
-print(fib(1));
-print(fib(2));
-print(fib(10));

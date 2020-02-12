@@ -91,6 +91,10 @@ impl<'a> Scanner<'a> {
         let text = self.eat_while(from, |ch| ch.is_alphanumeric());
         let typ = match text {
             "print" => Print,
+            "true" => True,
+            "false" => False,
+            "if" => If,
+            "else" => Else,
             _ => Ident,
         };
         self.emit(typ, text)
@@ -120,6 +124,8 @@ impl<'a> Scanner<'a> {
                 '\n' => self.line += 1,
                 '(' => return Ok(self.emit1(LeftParen, i)),
                 ')' => return Ok(self.emit1(RightParen, i)),
+                '{' => return Ok(self.emit1(LeftBrace, i)),
+                '}' => return Ok(self.emit1(RightBrace, i)),
                 ';' => return Ok(self.emit1(Semicolon, i)),
                 '=' if self.peek_is('=') => return Ok(self.eq(i)),
                 '*' => return Ok(self.emit1(Star, i)),

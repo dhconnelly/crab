@@ -4,14 +4,23 @@ pub struct Program {
 }
 
 #[derive(Debug)]
+pub struct Block(pub Vec<Stmt>);
+
+#[derive(Debug)]
 pub enum Stmt {
     PrintStmt(Expr),
+    IfStmt {
+        cond: Expr,
+        cons: Block,
+        alt: Option<Block>,
+    },
 }
 
 #[derive(Debug)]
 pub enum Expr {
     Ident(String),
     Int(i32),
+    Bool(bool),
     UnaryExpr(UnaryOp, Box<Expr>),
     BinaryExpr {
         op: BinaryOp,

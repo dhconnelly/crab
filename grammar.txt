@@ -1,5 +1,9 @@
 <program> ::= <stmt>* ;
-<stmt> ::= <comment> | "print" <expr> ";" ;
+<stmt> ::= <comment>
+         | "print" <expr> ";"
+         | "if" "(" <expr> ")" <block> ["else" <block>]
+         ;
+<block> ::= "{" <stmt>* "}" ;
 <comment> ::= "/" "/" .* "\n" ;
 <expr> ::= <ident> | <int> | <unary_expr> | <binary_expr> | '(' <expr> ')';
 <ident> ::= \w(\w\d)+ ;

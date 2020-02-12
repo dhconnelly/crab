@@ -58,8 +58,16 @@ impl Compiler {
         match expr {
             Ident(_val) => panic!("not implemented"),
             Int(val) => self.instrs.push(PushInt(*val)),
+            Bool(val) => self.instrs.push(PushBool(*val)),
             UnaryExpr(op, expr) => self.unary_expr(*op, expr)?,
             BinaryExpr { op, left, right } => self.binary_expr(*op, left, right)?,
+        }
+        Ok(())
+    }
+
+    fn stmts(&mut self, stmts: &Vec<Stmt>) -> Result<()> {
+        for stmt in stmts {
+            self.stmt(stmt)?;
         }
         Ok(())
     }
@@ -70,6 +78,17 @@ impl Compiler {
             PrintStmt(expr) => {
                 self.expr(expr)?;
                 self.instrs.push(Print);
+            }
+            IfStmt { cond, cons, alt } => {
+                self.expr()?;
+                let jump_index = self.instrs.len();
+                self.instrs.push(JumpIfNot(0));
+                self.stmts(cons)?;
+                let jump_target = self.instrs.len();
+                if alt.is_some() {
+                    self.instrs.push(Jump(0));
+                    self.stmts(alt.unwrap())?;
+                }
             }
         }
         Ok(())

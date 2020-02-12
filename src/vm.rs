@@ -30,6 +30,8 @@ impl error::Error for ExecutionError {
 
 type Result<T> = result::Result<T, ExecutionError>;
 
+// TODO: make all of this type stuff nicer using traits and so on
+
 #[derive(Debug)]
 pub enum Type {
     Int,
@@ -81,6 +83,14 @@ impl TypedValue {
             Err(ExecutionError::type_mismatch(Type::Int, self))
         }
     }
+
+    fn as_bool(self) -> Result<bool> {
+        if let Value::Bool(x) = self.val {
+            Ok(x)
+        } else {
+            Err(ExecutionError::type_mismatch(Type::Bool, self))
+        }
+    }
 }
 
 struct VM<'a> {
@@ -114,53 +124,83 @@ impl VM<'_> {
         self.pop_val()?.as_int()
     }
 
+    fn pop_bool(&mut self) -> Result<bool> {
+        self.pop_val()?.as_bool()
+    }
+
     fn step(&mut self) -> Result<()> {
         use Instr::*;
         let instr = &self.code[self.pc];
         match instr {
-            PushInt(val) => self.stack.push(TypedValue::int(*val)),
+            PushInt(val) => {
+                self.stack.push(TypedValue::int(*val));
+                self.pc += 1;
+            }
+
+            PushBool(val) => {
+                self.stack.push(TypedValue::bool(*val));
+                self.pc += 1;
+            }
 
             Negate => {
                 let val = TypedValue::int(-self.pop_int()?);
                 self.stack.push(val);
+                self.pc += 1;
             }
 
             Add => {
                 let right = self.pop_int()?;
                 let left = self.pop_int()?;
                 self.stack.push(TypedValue::int(left + right));
+                self.pc += 1;
             }
 
             Sub => {
                 let right = self.pop_int()?;
                 let left = self.pop_int()?;
                 self.stack.push(TypedValue::int(left + right));
+                self.pc += 1;
             }
 
             Mul => {
                 let right = self.pop_int()?;
                 let left = self.pop_int()?;
                 self.stack.push(TypedValue::int(left + right));
+                self.pc += 1;
             }
 
             Div => {
                 let right = self.pop_int()?;
                 let left = self.pop_int()?;
                 self.stack.push(TypedValue::int(left + right));
+                self.pc += 1;
             }
 
             Eq => {
                 let right = self.pop_int()?;
                 let left = self.pop_int()?;
                 self.stack.push(TypedValue::bool(left == right));
+                self.pc += 1;
             }
 
             Print => {
                 let val = self.pop_val()?;
                 println!("{}", val.val);
+                self.pc += 1;
+            }
+
+            Jump(pc) => {
+                self.pc = *pc;
+            }
+
+            JumpIfNot(pc) => {
+                if !self.pop_bool()? {
+                    self.pc = *pc;
+                } else {
+                    self.pc += 1;
+                }
             }
         }
-        self.pc += 1;
         Ok(())
     }
 
