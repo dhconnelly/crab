@@ -158,21 +158,21 @@ impl VM<'_> {
             Sub => {
                 let right = self.pop_int()?;
                 let left = self.pop_int()?;
-                self.stack.push(TypedValue::int(left + right));
+                self.stack.push(TypedValue::int(left - right));
                 self.pc += 1;
             }
 
             Mul => {
                 let right = self.pop_int()?;
                 let left = self.pop_int()?;
-                self.stack.push(TypedValue::int(left + right));
+                self.stack.push(TypedValue::int(left * right));
                 self.pc += 1;
             }
 
             Div => {
                 let right = self.pop_int()?;
                 let left = self.pop_int()?;
-                self.stack.push(TypedValue::int(left + right));
+                self.stack.push(TypedValue::int(left / right));
                 self.pc += 1;
             }
 

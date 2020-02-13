@@ -65,7 +65,7 @@ impl Compiler {
         Ok(())
     }
 
-    fn stmts(&mut self, stmts: &Vec<Stmt>) -> Result<()> {
+    fn block(&mut self, Block(stmts): &Block) -> Result<()> {
         for stmt in stmts {
             self.stmt(stmt)?;
         }
@@ -80,14 +80,21 @@ impl Compiler {
                 self.instrs.push(Print);
             }
             IfStmt { cond, cons, alt } => {
-                self.expr()?;
-                let jump_index = self.instrs.len();
+                self.expr(cond)?;
+                let skip_cons_pc = self.instrs.len();
                 self.instrs.push(JumpIfNot(0));
-                self.stmts(cons)?;
-                let jump_target = self.instrs.len();
+                self.block(cons)?;
                 if alt.is_some() {
+                    let skip_alt_pc = self.instrs.len();
                     self.instrs.push(Jump(0));
-                    self.stmts(alt.unwrap())?;
+                    let after_cons_pc = self.instrs.len();
+                    self.instrs[skip_cons_pc] = JumpIfNot(after_cons_pc);
+                    self.block(alt.as_ref().unwrap())?;
+                    let after_alt_pc = self.instrs.len();
+                    self.instrs[skip_alt_pc] = Jump(after_alt_pc);
+                } else {
+                    let after_cons_pc = self.instrs.len();
+                    self.instrs[skip_cons_pc] = JumpIfNot(after_cons_pc);
                 }
             }
         }
