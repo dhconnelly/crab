@@ -59,6 +59,7 @@ impl Compiler {
             Ident(_val) => panic!("not implemented"),
             Int(val) => self.instrs.push(PushInt(*val)),
             Bool(val) => self.instrs.push(PushBool(*val)),
+            Str(val) => self.instrs.push(PushStr(val.clone())),
             UnaryExpr(op, expr) => self.unary_expr(*op, expr)?,
             BinaryExpr { op, left, right } => self.binary_expr(*op, left, right)?,
         }

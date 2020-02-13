@@ -8,6 +8,7 @@ use std::str::CharIndices;
 #[derive(Debug, Clone, Copy)]
 pub enum ScanErrType {
     BadToken(char),
+    UnterminatedString,
 }
 use ScanErrType::*;
 
@@ -27,6 +28,7 @@ impl fmt::Display for ScanError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let msg = match &self.typ {
             BadToken(x) => format!("bad token: {}", x),
+            UnterminatedString => format!("unterminated string"),
         };
         write!(f, "scanner: line {}: {}", self.line, msg)
     }
@@ -67,13 +69,13 @@ impl<'a> Scanner<'a> {
         ScanError { line, typ }
     }
 
-    fn emit1(&self, typ: TokenType, i: usize) -> Token<'a> {
-        self.emit(typ, &self.text[i..i + 1])
-    }
-
     fn emit(&self, typ: TokenType, text: &'a str) -> Token<'a> {
         let line = self.line;
         Token { typ, text, line }
+    }
+
+    fn emit1(&self, typ: TokenType, i: usize) -> Token<'a> {
+        self.emit(typ, &self.text[i..i + 1])
     }
 
     fn eat_while(&mut self, from: usize, f: impl Fn(char) -> bool) -> &'a str {
@@ -114,6 +116,16 @@ impl<'a> Scanner<'a> {
         self.eat_while(from, |ch| ch != '\n');
     }
 
+    fn str(&mut self, from: usize) -> Result<Token<'a>> {
+        let text = self.eat_while(from, |ch| ch != '"');
+        if !self.peek_is('"') {
+            Err(self.err(UnterminatedString))
+        } else {
+            self.chars.next();
+            Ok(self.emit(Str, &text[1..text.len() - 1]))
+        }
+    }
+
     fn scan(&mut self) -> Result<Token<'a>> {
         loop {
             if self.at_end() {
@@ -133,6 +145,7 @@ impl<'a> Scanner<'a> {
                 '/' => return Ok(self.emit1(Slash, i)),
                 '+' => return Ok(self.emit1(Plus, i)),
                 '-' => return Ok(self.emit1(Minus, i)),
+                '"' => return self.str(i),
                 x if x.is_whitespace() => continue,
                 x if x.is_alphabetic() => return Ok(self.ident(i)),
                 x if x.is_numeric() => return Ok(self.int(i)),

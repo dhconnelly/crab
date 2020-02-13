@@ -21,6 +21,7 @@ pub enum Expr {
     Ident(String),
     Int(i32),
     Bool(bool),
+    Str(String),
     UnaryExpr(UnaryOp, Box<Expr>),
     BinaryExpr {
         op: BinaryOp,

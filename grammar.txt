@@ -5,7 +5,13 @@
          ;
 <block> ::= "{" <stmt>* "}" ;
 <comment> ::= "/" "/" .* "\n" ;
-<expr> ::= <ident> | <int> | <unary_expr> | <binary_expr> | '(' <expr> ')';
+<expr> ::= <ident> 
+         | <int> 
+         | <unary_expr> 
+         | <binary_expr> 
+         | '(' <expr> ')'
+         | '"' [^"] '"'
+         ;
 <ident> ::= \w(\w\d)+ ;
 <int> ::= \d+ ;
 <binary_expr> ::= <expr> <binary_op> <expr> ;

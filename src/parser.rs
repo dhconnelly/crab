@@ -122,10 +122,17 @@ impl<'a> Parser<'a> {
         Ok(Expr::Bool(val))
     }
 
+    fn str(&mut self) -> Result<Expr> {
+        let tok = self.eat(Str)?;
+        let val = tok.text.to_string();
+        Ok(Expr::Str(val))
+    }
+
     fn terminal(&mut self) -> Result<Expr> {
         match self.peek()?.typ {
             Ident => self.ident(),
             Int => self.int(),
+            Str => self.str(),
             True => self.bool(true),
             False => self.bool(false),
             _ => Err(ParseError::bad_expr(self.next().unwrap())),

@@ -2,6 +2,7 @@
 pub enum TokenType {
     EOF,
     Ident,
+    Str,
     Int,
     Print,
     If,

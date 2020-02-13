@@ -142,6 +142,8 @@ impl VM<'_> {
                 self.pc += 1;
             }
 
+            PushStr(val) => panic!("not implemented"),
+
             Negate => {
                 let val = TypedValue::int(-self.pop_int()?);
                 self.stack.push(val);
