@@ -36,12 +36,14 @@ type Result<T> = result::Result<T, ExecutionError>;
 pub enum Type {
     Int,
     Bool,
+    Str,
 }
 
 #[derive(Debug)]
 pub enum Value {
     Int(i32),
     Bool(bool),
+    Str(String),
 }
 
 impl fmt::Display for Value {
@@ -49,6 +51,7 @@ impl fmt::Display for Value {
         match self {
             Value::Int(x) => write!(f, "{}", x),
             Value::Bool(x) => write!(f, "{}", x),
+            Value::Str(x) => write!(f, "{}", x),
         }
     }
 }
@@ -73,6 +76,13 @@ impl TypedValue {
             val: Value::Bool(x),
         }
     }
+
+    fn str(x: String) -> TypedValue {
+        TypedValue {
+            typ: Type::Str,
+            val: Value::Str(x),
+        }
+    }
 }
 
 impl TypedValue {
@@ -89,6 +99,14 @@ impl TypedValue {
             Ok(x)
         } else {
             Err(ExecutionError::type_mismatch(Type::Bool, self))
+        }
+    }
+
+    fn as_str(self) -> Result<String> {
+        if let Value::Str(x) = self.val {
+            Ok(x)
+        } else {
+            Err(ExecutionError::type_mismatch(Type::Str, self))
         }
     }
 }
@@ -128,6 +146,10 @@ impl VM<'_> {
         self.pop_val()?.as_bool()
     }
 
+    fn pop_str(&mut self) -> Result<String> {
+        self.pop_val()?.as_str()
+    }
+
     fn step(&mut self) -> Result<()> {
         use Instr::*;
         let instr = &self.code[self.pc];
@@ -142,7 +164,10 @@ impl VM<'_> {
                 self.pc += 1;
             }
 
-            PushStr(val) => panic!("not implemented"),
+            PushStr(val) => {
+                self.stack.push(TypedValue::str(val.clone()));
+                self.pc += 1;
+            }
 
             Negate => {
                 let val = TypedValue::int(-self.pop_int()?);
@@ -179,9 +204,13 @@ impl VM<'_> {
             }
 
             Eq => {
-                let right = self.pop_int()?;
-                let left = self.pop_int()?;
-                self.stack.push(TypedValue::bool(left == right));
+                let right = self.pop_val()?;
+                let eq = match right.val {
+                    Value::Int(x) => self.pop_int()? == x,
+                    Value::Bool(x) => self.pop_bool()? == x,
+                    Value::Str(x) => self.pop_str()? == x,
+                };
+                self.stack.push(TypedValue::bool(eq));
                 self.pc += 1;
             }
 

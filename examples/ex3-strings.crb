@@ -1,2 +1,12 @@
 // strings
 print("hello, world!");
+
+print("test #1");
+if ("foo" == "bar") {
+  print("makes no sense");
+} else {
+  print("test #2");
+  if ("baz" == "baz") {
+    print("equality is working");
+  }
+}

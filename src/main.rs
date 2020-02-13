@@ -15,7 +15,6 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let text = fs::read_to_string(&path)?;
     let toks = scanner::scan(&text);
     let tree = parser::parse(toks)?;
-    println!("{:#?}", tree);
     let code = compiler::compile(&tree)?;
     vm::execute(&code)?;
     Ok(())

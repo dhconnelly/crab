@@ -118,11 +118,11 @@ impl<'a> Scanner<'a> {
 
     fn str(&mut self, from: usize) -> Result<Token<'a>> {
         let text = self.eat_while(from, |ch| ch != '"');
-        if !self.peek_is('"') {
-            Err(self.err(UnterminatedString))
-        } else {
+        if self.peek_is('"') {
             self.chars.next();
-            Ok(self.emit(Str, &text[1..text.len() - 1]))
+            Ok(self.emit(Str, &text[1..]))
+        } else {
+            Err(self.err(UnterminatedString))
         }
     }
 
