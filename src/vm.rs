@@ -1,4 +1,5 @@
 use crate::code::Instr;
+use std::collections::HashMap;
 use std::error;
 use std::fmt;
 use std::result;
@@ -7,6 +8,7 @@ use std::result;
 pub enum ExecutionError {
     StackEmptyErr,
     TypeMismatch { want: Type, got: TypedValue },
+    NoSuchBinding(usize),
 }
 use ExecutionError::*;
 
@@ -32,14 +34,14 @@ type Result<T> = result::Result<T, ExecutionError>;
 
 // TODO: make all of this type stuff nicer using traits and so on
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Type {
     Int,
     Bool,
     Str,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Int(i32),
     Bool(bool),
@@ -56,7 +58,7 @@ impl fmt::Display for Value {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TypedValue {
     pub typ: Type,
     pub val: Value,
@@ -113,6 +115,7 @@ impl TypedValue {
 
 struct VM<'a> {
     stack: Vec<TypedValue>,
+    bindings: HashMap<usize, usize>,
     code: &'a [Instr],
     pc: usize,
 }
@@ -121,6 +124,7 @@ impl VM<'_> {
     fn new(code: &[Instr]) -> VM {
         VM {
             stack: Vec::new(),
+            bindings: HashMap::new(),
             code,
             pc: 0,
         }
@@ -166,6 +170,20 @@ impl VM<'_> {
 
             PushStr(val) => {
                 self.stack.push(TypedValue::str(val.clone()));
+                self.pc += 1;
+            }
+
+            Get(i) => {
+                // TODO: handle scope
+                let i = self.bindings.get(i).ok_or(NoSuchBinding(*i))?;
+                let val = self.stack.get(*i).ok_or(StackEmptyErr)?.clone();
+                self.stack.push(val);
+                self.pc += 1;
+            }
+
+            Def(i) => {
+                // TODO: handle scope
+                self.bindings.insert(*i, self.stack.len() - 1);
                 self.pc += 1;
             }
 

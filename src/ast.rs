@@ -14,6 +14,7 @@ pub enum Stmt {
         cons: Block,
         alt: Option<Block>,
     },
+    LetStmt(String, Expr),
 }
 
 #[derive(Debug)]

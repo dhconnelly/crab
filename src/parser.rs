@@ -250,11 +250,21 @@ impl<'a> Parser<'a> {
         Ok(Stmt::IfStmt { cond, cons, alt })
     }
 
+    fn let_stmt(&mut self) -> Result<Stmt> {
+        self.eat(Let).unwrap();
+        let ident = self.eat(Ident)?.text.to_string();
+        self.eat(Eq)?;
+        let expr = self.expr()?;
+        self.eat(Semicolon)?;
+        Ok(Stmt::LetStmt(ident, expr))
+    }
+
     fn stmt(&mut self) -> Result<Stmt> {
         let tok = self.peek()?;
         match tok.typ {
             Print => self.print_stmt(),
             If => self.if_stmt(),
+            Let => self.let_stmt(),
             // TODO: use a different error
             _ => Err(ParseError::bad_expr(self.next().unwrap())),
         }

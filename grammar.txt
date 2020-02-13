@@ -2,6 +2,7 @@
 <stmt> ::= <comment>
          | "print" <expr> ";"
          | "if" "(" <expr> ")" <block> ["else" <block>]
+         | "let" <ident> "=" <expr> ";"
          ;
 <block> ::= "{" <stmt>* "}" ;
 <comment> ::= "/" "/" .* "\n" ;

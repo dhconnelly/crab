@@ -97,6 +97,7 @@ impl<'a> Scanner<'a> {
             "false" => False,
             "if" => If,
             "else" => Else,
+            "let" => Let,
             _ => Ident,
         };
         self.emit(typ, text)
@@ -140,6 +141,7 @@ impl<'a> Scanner<'a> {
                 '}' => return Ok(self.emit1(RightBrace, i)),
                 ';' => return Ok(self.emit1(Semicolon, i)),
                 '=' if self.peek_is('=') => return Ok(self.eq(i)),
+                '=' => return Ok(self.emit1(Eq, i)),
                 '*' => return Ok(self.emit1(Star, i)),
                 '/' if self.peek_is('/') => self.comment(i),
                 '/' => return Ok(self.emit1(Slash, i)),

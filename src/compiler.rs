@@ -1,5 +1,6 @@
 use crate::ast::*;
 use crate::code::{Instr, Instr::*};
+use std::collections::HashMap;
 use std::error;
 use std::fmt;
 use std::result;
@@ -23,11 +24,16 @@ type Result<T> = result::Result<T, CompileError>;
 
 struct Compiler {
     instrs: Vec<Instr>,
+    // TODO: handle scope
+    symbols: HashMap<String, usize>,
 }
 
 impl Compiler {
     fn new() -> Compiler {
-        Compiler { instrs: Vec::new() }
+        Compiler {
+            instrs: Vec::new(),
+            symbols: HashMap::new(),
+        }
     }
 
     fn unary_expr(&mut self, op: UnaryOp, expr: &Expr) -> Result<()> {
@@ -56,7 +62,11 @@ impl Compiler {
     fn expr(&mut self, expr: &Expr) -> Result<()> {
         use Expr::*;
         match expr {
-            Ident(_val) => panic!("not implemented"),
+            Ident(val) => {
+                // TODO: handle scope
+                let i = self.symbols.get(val).ok_or(CompileError)?;
+                self.instrs.push(Get(*i));
+            }
             Int(val) => self.instrs.push(PushInt(*val)),
             Bool(val) => self.instrs.push(PushBool(*val)),
             Str(val) => self.instrs.push(PushStr(val.clone())),
@@ -97,6 +107,17 @@ impl Compiler {
                     let after_cons_pc = self.instrs.len();
                     self.instrs[skip_cons_pc] = JumpIfNot(after_cons_pc);
                 }
+            }
+            LetStmt(ident, expr) => {
+                // TODO: handle scope
+                if self.symbols.contains_key(ident) {
+                    return Err(CompileError);
+                }
+                self.expr(expr)?;
+                let i = self.symbols.len();
+                // TODO: avoid string copy
+                self.symbols.insert(ident.to_string(), i);
+                self.instrs.push(Def(i));
             }
         }
         Ok(())
