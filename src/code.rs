@@ -1,11 +1,12 @@
 #[derive(Debug)]
 pub enum Instr {
     GetStack(usize),
+    SetStack(usize),
     PushInt(i32),
     PushBool(bool),
     PushStr(String),
     GetGlobal(usize),
-    DefGlobal(usize),
+    SetGlobal(usize),
     Negate,
     Add,
     Sub,

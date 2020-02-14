@@ -7,8 +7,10 @@ if (x == 5) {
   print(y - x);
   let x = 7;
   if (true == true) {
+    x = 6;
     print(y - x);
   }
 }
 
+y = 16;
 print(y - x);

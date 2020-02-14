@@ -15,6 +15,7 @@ pub enum Stmt {
         alt: Option<Block>,
     },
     LetStmt(String, Expr),
+    AssignStmt(String, Expr),
 }
 
 #[derive(Debug)]

@@ -82,7 +82,7 @@ impl Compiler {
             None => {
                 let i = self.globals.len();
                 self.globals.insert(ident.to_string(), i);
-                self.instrs.push(DefGlobal(i));
+                self.instrs.push(SetGlobal(i));
             }
             Some(frame) => {
                 frame.insert(ident.to_string(), self.stack_depth);
@@ -91,16 +91,35 @@ impl Compiler {
         }
     }
 
-    fn get(&mut self, ident: &str) -> Result<()> {
-        match self
-            .stack_frames
+    fn set(&mut self, ident: &str) -> Result<()> {
+        match self.find_frame(ident) {
+            None => {
+                let i = self
+                    .globals
+                    .get(ident)
+                    .ok_or(Undefined(ident.to_string()))?;
+                self.instrs.push(SetGlobal(*i));
+            }
+            Some(frame) => {
+                let i = *frame.get(ident).unwrap();
+                self.instrs.push(SetStack(i));
+            }
+        }
+        Ok(())
+    }
+
+    fn find_frame(&self, ident: &str) -> Option<&HashMap<String, usize>> {
+        self.stack_frames
             .iter()
             .rev()
             .find(|m| m.contains_key(ident))
-        {
+    }
+
+    fn get(&mut self, ident: &str) -> Result<()> {
+        match self.find_frame(ident) {
             Some(frame) => {
-                let i = frame.get(ident).unwrap();
-                Ok(self.instrs.push(GetStack(*i)))
+                let i = *frame.get(ident).unwrap();
+                Ok(self.instrs.push(GetStack(i)))
             }
             None => {
                 let i = self
@@ -175,6 +194,11 @@ impl Compiler {
                 }
                 self.expr(expr)?;
                 self.define(ident);
+            }
+
+            AssignStmt(ident, expr) => {
+                self.expr(expr)?;
+                self.set(ident)?;
             }
         }
         Ok(())

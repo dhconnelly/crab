@@ -3,6 +3,7 @@
          | "print" <expr> ";"
          | "if" "(" <expr> ")" <block> ["else" <block>]
          | "let" <ident> "=" <expr> ";"
+         | <ident> "=" <expr> ";"
          ;
 <block> ::= "{" <stmt>* "}" ;
 <comment> ::= "/" "/" .* "\n" ;

@@ -272,12 +272,21 @@ impl<'a> Parser<'a> {
         Ok(Stmt::LetStmt(ident, expr))
     }
 
+    fn assign_stmt(&mut self) -> Result<Stmt> {
+        let ident = self.eat(Ident).unwrap().text.to_string();
+        self.eat(Eq)?;
+        let expr = self.expr()?;
+        self.eat(Semicolon)?;
+        Ok(Stmt::AssignStmt(ident, expr))
+    }
+
     fn stmt(&mut self) -> Result<Stmt> {
         let tok = self.peek()?;
         match tok.typ {
             Print => self.print_stmt(),
             If => self.if_stmt(),
             Let => self.let_stmt(),
+            Ident => self.assign_stmt(),
             _ => Err(ParseError::bad_stmt(self.next().unwrap())),
         }
     }

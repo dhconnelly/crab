@@ -165,6 +165,13 @@ impl VM<'_> {
                 self.pc += 1;
             }
 
+            SetStack(i) => {
+                let val = self.pop_val()?;
+                let cur = self.stack.get_mut(*i).ok_or(StackOutOfBounds(*i))?;
+                *cur = val;
+                self.pc += 1;
+            }
+
             PushInt(val) => {
                 self.stack.push(TypedValue::int(*val));
                 self.pc += 1;
@@ -186,7 +193,7 @@ impl VM<'_> {
                 self.pc += 1;
             }
 
-            DefGlobal(i) => {
+            SetGlobal(i) => {
                 let val = self.pop_val()?;
                 self.globals.insert(*i, val);
                 self.pc += 1;
