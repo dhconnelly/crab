@@ -2,6 +2,7 @@
 pub enum Instr {
     GetStack(usize),
     SetStack(usize),
+    PopStack(usize),
     PushInt(i32),
     PushBool(bool),
     PushStr(String),

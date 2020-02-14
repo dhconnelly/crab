@@ -7,8 +7,20 @@ if (x == 5) {
   print(y - x);
   let x = 7;
   if (true == true) {
+    let w = x;
     x = 6;
+    print(y - w);
     print(y - x);
+  }
+
+  print(y - x);
+  let z = "foo";
+  print(z);
+  if (z == "bar") {
+    print(false);
+  } else {
+    z = "baz";
+    print(z == "baz");
   }
 }
 

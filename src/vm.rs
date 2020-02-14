@@ -172,6 +172,13 @@ impl VM<'_> {
                 self.pc += 1;
             }
 
+            PopStack(i) => {
+                for _ in 0..*i {
+                    self.stack.pop();
+                }
+                self.pc += 1;
+            }
+
             PushInt(val) => {
                 self.stack.push(TypedValue::int(*val));
                 self.pc += 1;

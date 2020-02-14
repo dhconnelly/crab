@@ -156,7 +156,9 @@ impl Compiler {
     }
 
     fn pop_frame(&mut self) {
-        self.stack_frames.pop();
+        let frame = self.stack_frames.pop();
+        self.instrs.push(PopStack(frame.as_ref().unwrap().len()));
+        self.stack_depth = self.stack_depth - frame.unwrap().len();
     }
 
     fn stmt(&mut self, stmt: &Stmt) -> Result<()> {
