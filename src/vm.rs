@@ -181,14 +181,12 @@ impl VM<'_> {
             }
 
             GetGlobal(i) => {
-                // TODO: handle scope
                 let val = self.globals.get(i).ok_or(NoSuchBinding(*i))?;
                 self.stack.push(val.clone());
                 self.pc += 1;
             }
 
             DefGlobal(i) => {
-                // TODO: handle scope
                 let val = self.pop_val()?;
                 self.globals.insert(*i, val);
                 self.pc += 1;

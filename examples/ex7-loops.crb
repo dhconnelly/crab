@@ -1,45 +1,14 @@
-// loops and iteration
-fn readline() {
-  let line = "";
-  loop {
-    let s = read();
-    if s == "\n" || s == "" {
-      return line;
-    }
-    line += s;
+fn fact(n) {
+  let x = 1;
+  while n > 0 {
+    x = x * n;
+    n = n - 1;
   }
+  return x;
 }
 
-fn readlines() {
-  let lines = [];
-  loop {
-    let line = readline();
-    if len(line) == 0 {
-      break;
-    }
-    lines.append(line);
-  }
-  return lines;
-}
-
-fn count(lines) {
-  let longest = "";
-  let shortest = "";
-  let count = 0;
-  for line in lines {
-    if len(line) > len(longest) {
-      longest = line;
-    }
-    if len(shortest) == 0 || len(line) < len(shortest) {
-      shortest = line;
-    }
-    count += 1;
-  }
-  return {
-    "longest": longest,
-    "shortest": shortest,
-    "count": count,
-  };
-}
-
-print(count(readlines()));
+print(fact(-1));
+print(fact(0));
+print(fact(1));
+print(fact(2));
+print(fact(10));

@@ -1,0 +1,45 @@
+// loops and iteration
+fn readline() {
+  let line = "";
+  loop {
+    let s = read();
+    if s == "\n" || s == "" {
+      return line;
+    }
+    line += s;
+  }
+}
+
+fn readlines() {
+  let lines = [];
+  loop {
+    let line = readline();
+    if len(line) == 0 {
+      break;
+    }
+    lines.append(line);
+  }
+  return lines;
+}
+
+fn count(lines) {
+  let longest = "";
+  let shortest = "";
+  let count = 0;
+  for line in lines {
+    if len(line) > len(longest) {
+      longest = line;
+    }
+    if len(shortest) == 0 || len(line) < len(shortest) {
+      shortest = line;
+    }
+    count += 1;
+  }
+  return {
+    "longest": longest,
+    "shortest": shortest,
+    "count": count,
+  };
+}
+
+print(count(readlines()));
