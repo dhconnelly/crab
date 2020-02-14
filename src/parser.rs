@@ -18,11 +18,6 @@ pub enum ParseError {
         line: usize,
     },
     ScanError(scanner::ScanError),
-    BadStmt {
-        line: usize,
-        text: String,
-        typ: TokenType,
-    },
     BadExpr {
         line: usize,
         text: String,
@@ -33,14 +28,6 @@ pub enum ParseError {
 use ParseError::*;
 
 impl ParseError {
-    fn bad_stmt(tok: Token<'_>) -> ParseError {
-        BadStmt {
-            line: tok.line,
-            text: tok.text.to_string(),
-            typ: tok.typ,
-        }
-    }
-
     fn bad_expr(tok: Token<'_>) -> ParseError {
         BadExpr {
             line: tok.line,
@@ -280,6 +267,12 @@ impl<'a> Parser<'a> {
         Ok(Stmt::AssignStmt(ident, expr))
     }
 
+    fn expr_stmt(&mut self) -> Result<Stmt> {
+        let expr = self.expr()?;
+        self.eat(Semicolon)?;
+        Ok(Stmt::ExprStmt(expr))
+    }
+
     fn stmt(&mut self) -> Result<Stmt> {
         let tok = self.peek()?;
         match tok.typ {
@@ -287,7 +280,7 @@ impl<'a> Parser<'a> {
             If => self.if_stmt(),
             Let => self.let_stmt(),
             Ident => self.assign_stmt(),
-            _ => Err(ParseError::bad_stmt(self.next().unwrap())),
+            _ => self.expr_stmt(),
         }
     }
 

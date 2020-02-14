@@ -8,7 +8,7 @@ use std::result;
 pub enum ExecutionError {
     StackEmptyErr,
     TypeMismatch { want: Type, got: TypedValue },
-    NoSuchBinding(usize),
+    InvalidGlobal(usize),
     StackOutOfBounds(usize),
 }
 use ExecutionError::*;
@@ -195,7 +195,7 @@ impl VM<'_> {
             }
 
             GetGlobal(i) => {
-                let val = self.globals.get(i).ok_or(NoSuchBinding(*i))?;
+                let val = self.globals.get(i).ok_or(InvalidGlobal(*i))?;
                 self.stack.push(val.clone());
                 self.pc += 1;
             }

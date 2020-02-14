@@ -11,6 +11,7 @@ if (x == 5) {
     x = 6;
     print(y - w);
     print(y - x);
+    false;
   }
 
   print(y - x);

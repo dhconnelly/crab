@@ -202,6 +202,11 @@ impl Compiler {
                 self.expr(expr)?;
                 self.set(ident)?;
             }
+
+            ExprStmt(expr) => {
+                self.expr(expr)?;
+                self.instrs.push(PopStack(1));
+            }
         }
         Ok(())
     }

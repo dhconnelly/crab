@@ -16,6 +16,7 @@ pub enum Stmt {
     },
     LetStmt(String, Expr),
     AssignStmt(String, Expr),
+    ExprStmt(Expr),
 }
 
 #[derive(Debug)]

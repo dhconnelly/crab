@@ -4,6 +4,7 @@
          | "if" "(" <expr> ")" <block> ["else" <block>]
          | "let" <ident> "=" <expr> ";"
          | <ident> "=" <expr> ";"
+         | <expr> ";"
          ;
 <block> ::= "{" <stmt>* "}" ;
 <comment> ::= "/" "/" .* "\n" ;
