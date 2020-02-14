@@ -9,6 +9,7 @@ pub enum ExecutionError {
     StackEmptyErr,
     TypeMismatch { want: Type, got: TypedValue },
     NoSuchBinding(usize),
+    StackOutOfBounds(usize),
 }
 use ExecutionError::*;
 
@@ -115,7 +116,7 @@ impl TypedValue {
 
 struct VM<'a> {
     stack: Vec<TypedValue>,
-    bindings: HashMap<usize, usize>,
+    globals: HashMap<usize, TypedValue>,
     code: &'a [Instr],
     pc: usize,
 }
@@ -124,7 +125,7 @@ impl VM<'_> {
     fn new(code: &[Instr]) -> VM {
         VM {
             stack: Vec::new(),
-            bindings: HashMap::new(),
+            globals: HashMap::new(),
             code,
             pc: 0,
         }
@@ -158,6 +159,12 @@ impl VM<'_> {
         use Instr::*;
         let instr = &self.code[self.pc];
         match instr {
+            GetStack(i) => {
+                let val = self.stack.get(*i).ok_or(StackOutOfBounds(*i))?.clone();
+                self.stack.push(val);
+                self.pc += 1;
+            }
+
             PushInt(val) => {
                 self.stack.push(TypedValue::int(*val));
                 self.pc += 1;
@@ -173,17 +180,17 @@ impl VM<'_> {
                 self.pc += 1;
             }
 
-            Get(i) => {
+            GetGlobal(i) => {
                 // TODO: handle scope
-                let i = self.bindings.get(i).ok_or(NoSuchBinding(*i))?;
-                let val = self.stack.get(*i).ok_or(StackEmptyErr)?.clone();
-                self.stack.push(val);
+                let val = self.globals.get(i).ok_or(NoSuchBinding(*i))?;
+                self.stack.push(val.clone());
                 self.pc += 1;
             }
 
-            Def(i) => {
+            DefGlobal(i) => {
                 // TODO: handle scope
-                self.bindings.insert(*i, self.stack.len() - 1);
+                let val = self.pop_val()?;
+                self.globals.insert(*i, val);
                 self.pc += 1;
             }
 

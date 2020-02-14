@@ -6,11 +6,19 @@ use std::fmt;
 use std::result;
 
 #[derive(Debug)]
-pub struct CompileError;
+pub enum CompileError {
+    Undefined(String),
+    Redefinition(String),
+}
+use CompileError::*;
 
 impl fmt::Display for CompileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "compiler:")
+        let msg = match self {
+            Undefined(ident) => format!("undefined: {}", ident),
+            Redefinition(ident) => format!("redefining: {}", ident),
+        };
+        write!(f, "compiler: {}", msg)
     }
 }
 
@@ -24,15 +32,18 @@ type Result<T> = result::Result<T, CompileError>;
 
 struct Compiler {
     instrs: Vec<Instr>,
-    // TODO: handle scope
-    symbols: HashMap<String, usize>,
+    globals: HashMap<String, usize>,
+    stack_frames: Vec<HashMap<String, usize>>,
+    stack_depth: usize,
 }
 
 impl Compiler {
     fn new() -> Compiler {
         Compiler {
             instrs: Vec::new(),
-            symbols: HashMap::new(),
+            globals: HashMap::new(),
+            stack_frames: Vec::new(),
+            stack_depth: 0,
         }
     }
 
@@ -59,14 +70,52 @@ impl Compiler {
         Ok(())
     }
 
+    fn is_defined(&self, ident: &str) -> bool {
+        match self.stack_frames.last() {
+            None => self.globals.contains_key(ident),
+            Some(frame) => frame.contains_key(ident),
+        }
+    }
+
+    fn define(&mut self, ident: &str) {
+        match self.stack_frames.last_mut() {
+            None => {
+                let i = self.globals.len();
+                self.globals.insert(ident.to_string(), i);
+                self.instrs.push(DefGlobal(i));
+            }
+            Some(frame) => {
+                frame.insert(ident.to_string(), self.stack_depth);
+                self.stack_depth += 1;
+            }
+        }
+    }
+
+    fn get(&mut self, ident: &str) -> Result<()> {
+        match self
+            .stack_frames
+            .iter()
+            .rev()
+            .find(|m| m.contains_key(ident))
+        {
+            Some(frame) => {
+                let i = frame.get(ident).unwrap();
+                Ok(self.instrs.push(GetStack(*i)))
+            }
+            None => {
+                let i = self
+                    .globals
+                    .get(ident)
+                    .ok_or(Undefined(ident.to_string()))?;
+                Ok(self.instrs.push(GetGlobal(*i)))
+            }
+        }
+    }
+
     fn expr(&mut self, expr: &Expr) -> Result<()> {
         use Expr::*;
         match expr {
-            Ident(val) => {
-                // TODO: handle scope
-                let i = self.symbols.get(val).ok_or(CompileError)?;
-                self.instrs.push(Get(*i));
-            }
+            Ident(val) => self.get(val)?,
             Int(val) => self.instrs.push(PushInt(*val)),
             Bool(val) => self.instrs.push(PushBool(*val)),
             Str(val) => self.instrs.push(PushStr(val.clone())),
@@ -83,6 +132,14 @@ impl Compiler {
         Ok(())
     }
 
+    fn push_frame(&mut self) {
+        self.stack_frames.push(HashMap::new());
+    }
+
+    fn pop_frame(&mut self) {
+        self.stack_frames.pop();
+    }
+
     fn stmt(&mut self, stmt: &Stmt) -> Result<()> {
         use Stmt::*;
         match stmt {
@@ -90,7 +147,9 @@ impl Compiler {
                 self.expr(expr)?;
                 self.instrs.push(Print);
             }
+
             IfStmt { cond, cons, alt } => {
+                self.push_frame();
                 self.expr(cond)?;
                 let skip_cons_pc = self.instrs.len();
                 self.instrs.push(JumpIfNot(0));
@@ -107,17 +166,15 @@ impl Compiler {
                     let after_cons_pc = self.instrs.len();
                     self.instrs[skip_cons_pc] = JumpIfNot(after_cons_pc);
                 }
+                self.pop_frame();
             }
+
             LetStmt(ident, expr) => {
-                // TODO: handle scope
-                if self.symbols.contains_key(ident) {
-                    return Err(CompileError);
+                if self.is_defined(ident) {
+                    return Err(Redefinition(ident.to_string()));
                 }
                 self.expr(expr)?;
-                let i = self.symbols.len();
-                // TODO: avoid string copy
-                self.symbols.insert(ident.to_string(), i);
-                self.instrs.push(Def(i));
+                self.define(ident);
             }
         }
         Ok(())

@@ -18,6 +18,11 @@ pub enum ParseError {
         line: usize,
     },
     ScanError(scanner::ScanError),
+    BadStmt {
+        line: usize,
+        text: String,
+        typ: TokenType,
+    },
     BadExpr {
         line: usize,
         text: String,
@@ -28,6 +33,14 @@ pub enum ParseError {
 use ParseError::*;
 
 impl ParseError {
+    fn bad_stmt(tok: Token<'_>) -> ParseError {
+        BadStmt {
+            line: tok.line,
+            text: tok.text.to_string(),
+            typ: tok.typ,
+        }
+    }
+
     fn bad_expr(tok: Token<'_>) -> ParseError {
         BadExpr {
             line: tok.line,
@@ -265,8 +278,7 @@ impl<'a> Parser<'a> {
             Print => self.print_stmt(),
             If => self.if_stmt(),
             Let => self.let_stmt(),
-            // TODO: use a different error
-            _ => Err(ParseError::bad_expr(self.next().unwrap())),
+            _ => Err(ParseError::bad_stmt(self.next().unwrap())),
         }
     }
 

@@ -1,4 +1,14 @@
 // assignment and lookup
 let x = 5;
 let y = 17;
+
+if (x == 5) {
+  let y = 9;
+  print(y - x);
+  let x = 7;
+  if (true == true) {
+    print(y - x);
+  }
+}
+
 print(y - x);
