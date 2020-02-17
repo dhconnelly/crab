@@ -19,6 +19,8 @@ pub enum Stmt {
     ExprStmt(Expr),
     FnDefStmt(String, Vec<String>, Block),
     ReturnStmt(Expr),
+    LoopStmt(Block),
+    BreakStmt,
 }
 
 #[derive(Debug)]

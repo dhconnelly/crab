@@ -9,6 +9,7 @@ use std::result;
 pub enum CompileError {
     Undefined(String),
     Redefinition(String),
+    NoBreakLabel,
 }
 use CompileError::*;
 
@@ -17,6 +18,7 @@ impl fmt::Display for CompileError {
         let msg = match self {
             Undefined(ident) => format!("undefined: {}", ident),
             Redefinition(ident) => format!("redefining: {}", ident),
+            NoBreakLabel => format!("can't break, not in a loop!"),
         };
         write!(f, "compiler: {}", msg)
     }
@@ -34,12 +36,17 @@ struct CallFrame {
     depth: usize,
 }
 
+struct LoopFrame {
+    break_instrs: Vec<usize>,
+}
+
 struct Compiler {
     instrs: Vec<Instr>,
     globals: HashMap<String, usize>,
     stack_frames: Vec<HashMap<String, usize>>,
     stack_depth: usize,
     call_stack: Vec<CallFrame>,
+    loop_frames: Vec<LoopFrame>,
 }
 
 impl Compiler {
@@ -50,6 +57,7 @@ impl Compiler {
             stack_frames: Vec::new(),
             stack_depth: 0,
             call_stack: Vec::new(),
+            loop_frames: Vec::new(),
         }
     }
 
@@ -258,6 +266,28 @@ impl Compiler {
                     self.instrs[skip_cons_pc] = PushAddr(after_cons_pc);
                 }
                 self.pop_frame();
+            }
+
+            LoopStmt(body) => {
+                let begin_addr = self.instrs.len();
+                self.loop_frames.push(LoopFrame {
+                    break_instrs: Vec::new(),
+                });
+                self.block(body)?;
+                self.instrs.push(PushAddr(begin_addr));
+                self.instrs.push(Jump);
+                let end_addr = self.instrs.len();
+                let frame = self.loop_frames.pop().unwrap();
+                for instr in frame.break_instrs {
+                    self.instrs[instr] = PushAddr(end_addr);
+                }
+            }
+
+            BreakStmt => {
+                let frame = self.loop_frames.last_mut().ok_or(NoBreakLabel)?;
+                frame.break_instrs.push(self.instrs.len());
+                self.instrs.push(PushAddr(0));
+                self.instrs.push(Jump);
             }
 
             LetStmt(ident, expr) => {

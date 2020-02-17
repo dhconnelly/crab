@@ -1,6 +1,9 @@
 fn fact(n) {
   let x = 1;
-  while n > 0 {
+  loop {
+    if (n < 1) {
+      break;
+    }
     x = x * n;
     n = n - 1;
   }
@@ -11,4 +14,6 @@ print(fact(-1));
 print(fact(0));
 print(fact(1));
 print(fact(2));
+print(fact(3));
+print(fact(4));
 print(fact(10));

@@ -100,6 +100,8 @@ impl<'a> Scanner<'a> {
             "let" => Let,
             "fn" => Func,
             "return" => Return,
+            "loop" => Loop,
+            "break" => Break,
             _ => Ident,
         };
         self.emit(typ, text)

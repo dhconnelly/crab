@@ -12,6 +12,8 @@ pub enum TokenType {
     False,
     Func,
     Return,
+    Loop,
+    Break,
     LeftParen,
     RightParen,
     LeftBrace,

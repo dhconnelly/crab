@@ -315,6 +315,16 @@ impl<'a> Parser<'a> {
         Ok(Stmt::ReturnStmt(expr))
     }
 
+    fn break_stmt(&mut self) -> Result<Stmt> {
+        self.eat(Semicolon)?;
+        Ok(Stmt::BreakStmt)
+    }
+
+    fn loop_stmt(&mut self) -> Result<Stmt> {
+        let body = self.block()?;
+        Ok(Stmt::LoopStmt(body))
+    }
+
     fn stmt(&mut self) -> Result<Stmt> {
         let tok = self.next()?;
         match tok.typ {
@@ -323,6 +333,8 @@ impl<'a> Parser<'a> {
             Let => self.let_stmt(),
             Ident if self.peek_is(Eq) => self.assign_stmt(tok.text),
             Return => self.return_stmt(),
+            Break => self.break_stmt(),
+            Loop => self.loop_stmt(),
             _ => self.expr_stmt(tok),
         }
     }
