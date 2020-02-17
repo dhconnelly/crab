@@ -6,6 +6,7 @@ pub enum Instr {
     PushInt(i32),
     PushBool(bool),
     PushStr(String),
+    PushAddr(usize),
     GetGlobal(usize),
     SetGlobal(usize),
     Negate,
@@ -16,6 +17,7 @@ pub enum Instr {
     Eq,
     Less,
     Print,
-    Jump(usize),
-    JumpIfNot(usize),
+    Jump,
+    JumpIfNot,
+    PushCur,
 }

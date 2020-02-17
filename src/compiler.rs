@@ -175,19 +175,21 @@ impl Compiler {
                 self.push_frame();
                 self.expr(cond)?;
                 let skip_cons_pc = self.instrs.len();
-                self.instrs.push(JumpIfNot(0));
+                self.instrs.push(PushAddr(0));
+                self.instrs.push(JumpIfNot);
                 self.block(cons)?;
                 if alt.is_some() {
                     let skip_alt_pc = self.instrs.len();
-                    self.instrs.push(Jump(0));
+                    self.instrs.push(PushAddr(0));
+                    self.instrs.push(Jump);
                     let after_cons_pc = self.instrs.len();
-                    self.instrs[skip_cons_pc] = JumpIfNot(after_cons_pc);
+                    self.instrs[skip_cons_pc] = PushAddr(after_cons_pc);
                     self.block(alt.as_ref().unwrap())?;
                     let after_alt_pc = self.instrs.len();
-                    self.instrs[skip_alt_pc] = Jump(after_alt_pc);
+                    self.instrs[skip_alt_pc] = PushAddr(after_alt_pc);
                 } else {
                     let after_cons_pc = self.instrs.len();
-                    self.instrs[skip_cons_pc] = JumpIfNot(after_cons_pc);
+                    self.instrs[skip_cons_pc] = PushAddr(after_cons_pc);
                 }
                 self.pop_frame();
             }

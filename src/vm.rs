@@ -40,6 +40,7 @@ pub enum Type {
     Int,
     Bool,
     Str,
+    Addr,
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +48,7 @@ pub enum Value {
     Int(i32),
     Bool(bool),
     Str(String),
+    Addr(usize),
 }
 
 impl fmt::Display for Value {
@@ -55,6 +57,7 @@ impl fmt::Display for Value {
             Value::Int(x) => write!(f, "{}", x),
             Value::Bool(x) => write!(f, "{}", x),
             Value::Str(x) => write!(f, "{}", x),
+            Value::Addr(x) => write!(f, "{}", x),
         }
     }
 }
@@ -70,6 +73,13 @@ impl TypedValue {
         TypedValue {
             typ: Type::Int,
             val: Value::Int(x),
+        }
+    }
+
+    fn addr(x: usize) -> TypedValue {
+        TypedValue {
+            typ: Type::Addr,
+            val: Value::Addr(x),
         }
     }
 
@@ -94,6 +104,14 @@ impl TypedValue {
             Ok(x)
         } else {
             Err(ExecutionError::type_mismatch(Type::Int, self))
+        }
+    }
+
+    fn as_addr(self) -> Result<usize> {
+        if let Value::Addr(x) = self.val {
+            Ok(x)
+        } else {
+            Err(ExecutionError::type_mismatch(Type::Addr, self))
         }
     }
 
@@ -145,6 +163,10 @@ impl VM<'_> {
 
     fn pop_int(&mut self) -> Result<i32> {
         self.pop_val()?.as_int()
+    }
+
+    fn pop_addr(&mut self) -> Result<usize> {
+        self.pop_val()?.as_addr()
     }
 
     fn pop_bool(&mut self) -> Result<bool> {
@@ -246,6 +268,7 @@ impl VM<'_> {
                     Value::Int(x) => self.pop_int()? == x,
                     Value::Bool(x) => self.pop_bool()? == x,
                     Value::Str(x) => self.pop_str()? == x,
+                    Value::Addr(x) => panic!("address comparison not supported"),
                 };
                 self.stack.push(TypedValue::bool(eq));
                 self.pc += 1;
@@ -261,16 +284,27 @@ impl VM<'_> {
                 self.pc += 1;
             }
 
-            Jump(pc) => {
-                self.pc = *pc;
+            Jump => {
+                self.pc = self.pop_addr()?;
             }
 
-            JumpIfNot(pc) => {
+            JumpIfNot => {
+                let addr = self.pop_addr()?;
                 if !self.pop_bool()? {
-                    self.pc = *pc;
+                    self.pc = addr;
                 } else {
                     self.pc += 1;
                 }
+            }
+
+            PushAddr(x) => {
+                self.stack.push(TypedValue::addr(*x));
+                self.pc += 1;
+            }
+
+            PushCur => {
+                self.stack.push(TypedValue::addr(self.pc));
+                self.pc += 1;
             }
         }
         Ok(())
