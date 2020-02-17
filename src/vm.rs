@@ -135,7 +135,6 @@ impl TypedValue {
 }
 
 struct Function {
-    name: String,
     addr: usize,
     params: usize,
 }
@@ -195,27 +194,30 @@ impl VM<'_> {
         use Instr::*;
         let instr = &self.code[self.pc];
         match instr {
-            Call(name, args) => match self.functions.get(name) {
-                None => return Err(BadFunction(name.to_string())),
-                Some(func) if func.params != *args => {
-                    return Err(ArgumentCountMismatch(name.to_string(), func.params, *args));
+            Call(name, args) => {
+                let func = self.functions.get(name);
+                match func {
+                    None => return Err(BadFunction(name.to_string())),
+                    Some(func) if func.params != *args => {
+                        return Err(ArgumentCountMismatch(name.to_string(), func.params, *args));
+                    }
+                    Some(func) => {
+                        self.returns.push(self.pc + 1);
+                        self.pc = func.addr;
+                        self.sps.push(self.stack.len() - func.params);
+                    }
                 }
-                Some(func) => {
-                    self.returns.push(self.pc);
-                    self.pc = func.addr;
-                    self.sps.push(self.stack.len());
-                }
-            },
+            }
 
-            Def(name, params) => {
+            Def(name, params, size) => {
                 self.functions.insert(
                     name.to_string(),
                     Function {
-                        name: name.to_string(),
                         params: *params,
-                        addr: self.pc,
+                        addr: self.pc + 1,
                     },
                 );
+                self.pc += size - 1;
             }
 
             Return => {
@@ -317,14 +319,17 @@ impl VM<'_> {
                     Value::Int(x) => self.pop_int()? == x,
                     Value::Bool(x) => self.pop_bool()? == x,
                     Value::Str(x) => self.pop_str()? == x,
-                    Value::Addr(x) => panic!("address comparison not supported"),
+                    Value::Addr(_) => panic!("address comparison not supported"),
                 };
                 self.stack.push(TypedValue::bool(eq));
                 self.pc += 1;
             }
 
             Less => {
-                panic!("not implemented: Less");
+                let right = self.pop_int()?;
+                let left = self.pop_int()?;
+                self.stack.push(TypedValue::bool(left < right));
+                self.pc += 1;
             }
 
             Print => {
@@ -348,11 +353,6 @@ impl VM<'_> {
 
             PushAddr(x) => {
                 self.stack.push(TypedValue::addr(*x));
-                self.pc += 1;
-            }
-
-            PushCur => {
-                self.stack.push(TypedValue::addr(self.pc));
                 self.pc += 1;
             }
         }

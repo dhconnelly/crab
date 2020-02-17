@@ -5,5 +5,5 @@ fn f(x, y) {
 }
 
 f(0, 0);
-let result = f(2, f(0,0));
+let result = f(2, f(0,0)); // -3
 print(result);

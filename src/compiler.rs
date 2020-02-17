@@ -31,7 +31,6 @@ impl error::Error for CompileError {
 type Result<T> = result::Result<T, CompileError>;
 
 struct CallFrame {
-    callee: String,
     depth: usize,
 }
 
@@ -85,11 +84,6 @@ impl Compiler {
         }
     }
 
-    fn define_stack_rel(&mut self, ident: &str, offset: usize) {
-        let frame = self.stack_frames.last_mut().unwrap();
-        frame.insert(ident.to_string(), self.stack_depth - offset);
-    }
-
     fn stack_base(&self) -> usize {
         match self.call_stack.last() {
             Some(frame) => frame.depth,
@@ -139,7 +133,7 @@ impl Compiler {
             .enumerate()
             .rev()
             .find(|(depth, m)| depth >= min_depth && m.contains_key(ident))
-            .map(|(depth, m)| m)
+            .map(|(_, m)| m)
     }
 
     fn get(&mut self, ident: &str) -> Result<()> {
@@ -189,13 +183,6 @@ impl Compiler {
         self.stack_depth = self.stack_depth - frame.unwrap().len();
     }
 
-    fn push_call(&mut self, callee: &str) {
-        self.call_stack.push(CallFrame {
-            callee: callee.to_string(),
-            depth: self.stack_depth,
-        });
-    }
-
     fn call(&mut self, callee: &str, args: &Vec<Expr>) -> Result<()> {
         for arg in args {
             self.expr(arg)?;
@@ -211,14 +198,14 @@ impl Compiler {
     }
 
     fn fn_def(&mut self, name: &str, params: &[String], body: &Block) -> Result<()> {
-        self.instrs.push(Def(name.to_string(), params.len()));
+        let before_fn_def = self.instrs.len();
+        self.instrs.push(Def(name.to_string(), params.len(), 0));
         self.call_stack.push(CallFrame {
-            callee: name.to_string(),
             depth: self.stack_depth,
         });
         self.push_frame();
-        for (i, param) in params.iter().rev().enumerate() {
-            self.define_stack_rel(param, i);
+        for param in params {
+            self.define(param);
         }
         let Block(stmts) = body;
         for stmt in stmts {
@@ -237,6 +224,8 @@ impl Compiler {
         }
         self.pop_frame();
         self.call_stack.pop().unwrap();
+        let instrs = self.instrs.len() - before_fn_def;
+        self.instrs[before_fn_def] = Def(name.to_string(), params.len(), instrs);
         Ok(())
     }
 
