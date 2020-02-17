@@ -14,6 +14,7 @@ pub enum Instr {
     Mul,
     Div,
     Eq,
+    Less,
     Print,
     Jump(usize),
     JumpIfNot(usize),

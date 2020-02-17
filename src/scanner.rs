@@ -98,6 +98,8 @@ impl<'a> Scanner<'a> {
             "if" => If,
             "else" => Else,
             "let" => Let,
+            "fn" => Func,
+            "return" => Return,
             _ => Ident,
         };
         self.emit(typ, text)
@@ -148,6 +150,8 @@ impl<'a> Scanner<'a> {
                 '+' => return Ok(self.emit1(Plus, i)),
                 '-' => return Ok(self.emit1(Minus, i)),
                 '"' => return self.str(i),
+                ',' => return Ok(self.emit1(Comma, i)),
+                '<' => return Ok(self.emit1(Less, i)),
                 x if x.is_whitespace() => continue,
                 x if x.is_alphabetic() => return Ok(self.ident(i)),
                 x if x.is_numeric() => return Ok(self.int(i)),

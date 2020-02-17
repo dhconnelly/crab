@@ -66,6 +66,7 @@ impl Compiler {
             Slash => self.instrs.push(Div),
             Plus => self.instrs.push(Add),
             Minus => self.instrs.push(Sub),
+            BinaryOp::Less => self.instrs.push(Instr::Less),
         }
         Ok(())
     }
@@ -140,6 +141,7 @@ impl Compiler {
             Str(val) => self.instrs.push(PushStr(val.clone())),
             UnaryExpr(op, expr) => self.unary_expr(*op, expr)?,
             BinaryExpr { op, left, right } => self.binary_expr(*op, left, right)?,
+            CallExpr(callee, args) => panic!("not implemented: CallExpr"),
         }
         Ok(())
     }
@@ -206,6 +208,14 @@ impl Compiler {
             ExprStmt(expr) => {
                 self.expr(expr)?;
                 self.instrs.push(PopStack(1));
+            }
+
+            FnDefStmt(name, params, body) => {
+                panic!("not implemented: FnDefStmt");
+            }
+
+            ReturnStmt(expr) => {
+                panic!("not implemented: ReturnStmt");
             }
         }
         Ok(())

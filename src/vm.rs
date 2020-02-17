@@ -251,6 +251,10 @@ impl VM<'_> {
                 self.pc += 1;
             }
 
+            Less => {
+                panic!("not implemented: Less");
+            }
+
             Print => {
                 let val = self.pop_val()?;
                 println!("{}", val.val);

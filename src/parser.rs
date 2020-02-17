@@ -15,6 +15,7 @@ pub enum ParseError {
     TokenMismatch {
         want: TokenType,
         got: TokenType,
+        text: String,
         line: usize,
     },
     ScanError(scanner::ScanError),
@@ -36,8 +37,13 @@ impl ParseError {
         }
     }
 
-    fn token_mismatch(want: TokenType, got: TokenType, line: usize) -> ParseError {
-        TokenMismatch { want, got, line }
+    fn token_mismatch(want: TokenType, got: Token) -> ParseError {
+        TokenMismatch {
+            want,
+            got: got.typ,
+            line: got.line,
+            text: got.text.to_string(),
+        }
     }
 }
 
@@ -77,6 +83,11 @@ impl<'a> Parser<'a> {
         Parser { toks }
     }
 
+    fn peek_is(&mut self, typ: TokenType) -> bool {
+        let peek = self.peek();
+        peek.is_ok() && peek.unwrap().typ == typ
+    }
+
     fn peek(&mut self) -> Result<&Token> {
         match self.toks.peek() {
             Some(Ok(tok)) => Ok(tok),
@@ -93,79 +104,93 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn next(&mut self) -> Result<Token> {
+    fn next(&mut self) -> Result<Token<'a>> {
         self.toks.next().unwrap().map_err(|e| e.into())
     }
 
     fn eat(&mut self, want: TokenType) -> Result<Token> {
         match self.toks.next() {
             Some(Ok(got)) if got.typ == want => Ok(got),
-            Some(Ok(got)) => Err(ParseError::token_mismatch(want, got.typ, got.line)),
+            Some(Ok(got)) => Err(ParseError::token_mismatch(want, got)),
             Some(Err(err)) => Err(err.into()),
             None => Err(UnexpectedEOF),
         }
     }
 
-    fn ident(&mut self) -> Result<Expr> {
-        let tok = self.eat(Ident)?;
+    fn ident(&mut self, tok: Token<'_>) -> Result<Expr> {
         Ok(Expr::Ident(tok.text.to_string()))
     }
 
-    fn int(&mut self) -> Result<Expr> {
-        let tok = self.eat(Int)?;
+    fn int(&mut self, tok: Token<'_>) -> Result<Expr> {
         let val = tok.text.parse::<i32>()?;
         Ok(Expr::Int(val))
     }
 
     fn bool(&mut self, val: bool) -> Result<Expr> {
-        self.next().unwrap();
         Ok(Expr::Bool(val))
     }
 
-    fn str(&mut self) -> Result<Expr> {
-        let tok = self.eat(Str)?;
+    fn str(&mut self, tok: Token<'_>) -> Result<Expr> {
         let val = tok.text.to_string();
         Ok(Expr::Str(val))
     }
 
-    fn terminal(&mut self) -> Result<Expr> {
-        match self.peek()?.typ {
-            Ident => self.ident(),
-            Int => self.int(),
-            Str => self.str(),
+    fn call(&mut self, tok: Token<'_>) -> Result<Expr> {
+        let callee = tok.text.to_string();
+        self.eat(LeftParen)?;
+        let mut args = Vec::new();
+        while !self.peek_is(RightParen) {
+            let tok = self.next()?;
+            let expr = self.expr(tok)?;
+            args.push(expr);
+            if !self.peek_is(RightParen) {
+                self.eat(Comma)?;
+            }
+        }
+        self.eat(RightParen)?;
+        Ok(Expr::CallExpr(callee, args))
+    }
+
+    fn terminal(&mut self, tok: Token<'_>) -> Result<Expr> {
+        match tok.typ {
+            Ident if self.peek_is(LeftParen) => self.call(tok),
+            Ident => self.ident(tok),
+            Int => self.int(tok),
+            Str => self.str(tok),
             True => self.bool(true),
             False => self.bool(false),
-            _ => Err(ParseError::bad_expr(self.next().unwrap())),
+            _ => Err(ParseError::bad_expr(tok)),
         }
     }
 
-    fn grouping(&mut self) -> Result<Expr> {
-        if self.peek()?.typ == LeftParen {
-            self.eat(LeftParen).unwrap();
-            let expr = self.expr()?;
+    fn grouping(&mut self, tok: Token<'_>) -> Result<Expr> {
+        if tok.typ == LeftParen {
+            let tok = self.next()?;
+            let expr = self.expr(tok)?;
             self.eat(RightParen)?;
             Ok(expr)
         } else {
-            self.terminal()
+            self.terminal(tok)
         }
     }
 
-    fn unary_expr(&mut self) -> Result<Expr> {
-        if self.peek()?.typ == Minus {
-            self.eat(Minus).unwrap();
-            let expr = self.unary_expr()?;
+    fn unary_expr(&mut self, tok: Token<'_>) -> Result<Expr> {
+        if tok.typ == Minus {
+            let tok = self.next()?;
+            let expr = self.unary_expr(tok)?;
             Ok(Expr::UnaryExpr(UnaryOp::Minus, Box::new(expr)))
         } else {
-            self.grouping()
+            self.grouping(tok)
         }
     }
 
-    fn mult_expr(&mut self) -> Result<Expr> {
-        let mut left = self.unary_expr()?;
+    fn mult_expr(&mut self, tok: Token<'_>) -> Result<Expr> {
+        let mut left = self.unary_expr(tok)?;
         while !self.at_end() {
             if let Star | Slash = self.peek()?.typ {
                 let op = self.next().unwrap().typ;
-                let right = self.unary_expr()?;
+                let tok = self.next()?;
+                let right = self.unary_expr(tok)?;
                 let op = match op {
                     Star => BinaryOp::Star,
                     Slash => BinaryOp::Slash,
@@ -179,12 +204,13 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
-    fn add_expr(&mut self) -> Result<Expr> {
-        let mut left = self.mult_expr()?;
+    fn add_expr(&mut self, tok: Token<'_>) -> Result<Expr> {
+        let mut left = self.mult_expr(tok)?;
         while !self.at_end() {
             if let Plus | Minus = self.peek()?.typ {
                 let op = self.next().unwrap().typ;
-                let right = self.mult_expr()?;
+                let tok = self.next()?;
+                let right = self.mult_expr(tok)?;
                 let op = match op {
                     Plus => BinaryOp::Plus,
                     Minus => BinaryOp::Minus,
@@ -198,27 +224,42 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
-    fn comp_expr(&mut self) -> Result<Expr> {
-        let mut left = self.add_expr()?;
+    fn binary_op(&mut self, op: BinaryOp, left: Expr) -> Result<Expr> {
+        self.next().unwrap();
+        let tok = self.next()?;
+        let right = self.add_expr(tok)?;
+        println!("found right: {:?}", right);
+        Ok(Expr::binary(op, Box::new(left), Box::new(right)))
+    }
+
+    fn comp_expr(&mut self, tok: Token<'_>) -> Result<Expr> {
+        let mut left = self.add_expr(tok)?;
+        println!("initial left: {:?}", left);
+        println!("next: {:?}", self.peek());
         while !self.at_end() {
-            if self.peek()?.typ == EqEq {
-                self.eat(EqEq).unwrap();
-                let right = self.add_expr()?;
-                left = Expr::binary(BinaryOp::EqEq, Box::new(left), Box::new(right));
-            } else {
-                break;
-            }
+            let tok = self.peek()?;
+            left = match tok.typ {
+                EqEq => self.binary_op(BinaryOp::EqEq, left)?,
+                Less => self.binary_op(BinaryOp::Less, left)?,
+                _ => break,
+            };
+            println!("new left: {:?}", left);
         }
+        println!("finished left: {:?}", left);
         Ok(left)
     }
 
-    fn expr(&mut self) -> Result<Expr> {
-        self.comp_expr()
+    fn expr(&mut self, tok: Token<'_>) -> Result<Expr> {
+        let expr = self.comp_expr(tok)?;
+        println!("got expr: {:?}", expr);
+        Ok(expr)
     }
 
     fn print_stmt(&mut self) -> Result<Stmt> {
-        self.eat(Print)?;
-        let expr = self.expr()?;
+        self.eat(LeftParen)?;
+        let tok = self.next()?;
+        let expr = self.expr(tok)?;
+        self.eat(RightParen)?;
         self.eat(Semicolon)?;
         Ok(Stmt::PrintStmt(expr))
     }
@@ -236,9 +277,9 @@ impl<'a> Parser<'a> {
     }
 
     fn if_stmt(&mut self) -> Result<Stmt> {
-        self.eat(If).unwrap();
         self.eat(LeftParen)?;
-        let cond = self.expr()?;
+        let tok = self.next()?;
+        let cond = self.expr(tok)?;
         self.eat(RightParen)?;
         let cons = self.block()?;
         let alt = if let Ok(Token { typ: Else, .. }) = self.peek() {
@@ -251,43 +292,74 @@ impl<'a> Parser<'a> {
     }
 
     fn let_stmt(&mut self) -> Result<Stmt> {
-        self.eat(Let).unwrap();
         let ident = self.eat(Ident)?.text.to_string();
         self.eat(Eq)?;
-        let expr = self.expr()?;
+        let tok = self.next()?;
+        let expr = self.expr(tok)?;
         self.eat(Semicolon)?;
         Ok(Stmt::LetStmt(ident, expr))
     }
 
-    fn assign_stmt(&mut self) -> Result<Stmt> {
-        let ident = self.eat(Ident).unwrap().text.to_string();
+    fn assign_stmt(&mut self, ident: &str) -> Result<Stmt> {
         self.eat(Eq)?;
-        let expr = self.expr()?;
+        let tok = self.next()?;
+        let expr = self.expr(tok)?;
         self.eat(Semicolon)?;
-        Ok(Stmt::AssignStmt(ident, expr))
+        Ok(Stmt::AssignStmt(ident.to_string(), expr))
     }
 
-    fn expr_stmt(&mut self) -> Result<Stmt> {
-        let expr = self.expr()?;
+    fn expr_stmt(&mut self, tok: Token<'_>) -> Result<Stmt> {
+        let expr = self.expr(tok)?;
         self.eat(Semicolon)?;
         Ok(Stmt::ExprStmt(expr))
     }
 
+    fn return_stmt(&mut self) -> Result<Stmt> {
+        let tok = self.next()?;
+        let expr = self.expr(tok)?;
+        self.eat(Semicolon)?;
+        Ok(Stmt::ReturnStmt(expr))
+    }
+
     fn stmt(&mut self) -> Result<Stmt> {
-        let tok = self.peek()?;
+        let tok = self.next()?;
         match tok.typ {
             Print => self.print_stmt(),
             If => self.if_stmt(),
             Let => self.let_stmt(),
-            Ident => self.assign_stmt(),
-            _ => self.expr_stmt(),
+            Ident if self.peek_is(Eq) => self.assign_stmt(tok.text),
+            Return => self.return_stmt(),
+            _ => self.expr_stmt(tok),
+        }
+    }
+
+    fn fn_def(&mut self) -> Result<Stmt> {
+        self.eat(Func)?;
+        let name = self.eat(Ident)?.text.to_string();
+        self.eat(LeftParen)?;
+        let mut params = Vec::new();
+        while !self.peek_is(RightParen) {
+            params.push(self.eat(Ident)?.text.to_string());
+            if !self.peek_is(RightParen) {
+                self.eat(Comma)?;
+            }
+        }
+        self.eat(RightParen)?;
+        let body = self.block()?;
+        Ok(Stmt::FnDefStmt(name, params, body))
+    }
+
+    fn def(&mut self) -> Result<Stmt> {
+        match self.peek()?.typ {
+            Func => self.fn_def(),
+            _ => self.stmt(),
         }
     }
 
     fn program(&mut self) -> Result<Program> {
         let mut stmts = Vec::new();
         while !self.at_end() {
-            stmts.push(self.stmt()?);
+            stmts.push(self.def()?);
         }
         Ok(Program { stmts })
     }

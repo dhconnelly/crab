@@ -17,6 +17,8 @@ pub enum Stmt {
     LetStmt(String, Expr),
     AssignStmt(String, Expr),
     ExprStmt(Expr),
+    FnDefStmt(String, Vec<String>, Block),
+    ReturnStmt(Expr),
 }
 
 #[derive(Debug)]
@@ -31,6 +33,7 @@ pub enum Expr {
         left: Box<Expr>,
         right: Box<Expr>,
     },
+    CallExpr(String, Vec<Expr>),
 }
 
 impl Expr {
@@ -46,6 +49,7 @@ pub enum BinaryOp {
     Slash,
     Plus,
     Minus,
+    Less,
 }
 
 #[derive(Debug, Clone, Copy)]

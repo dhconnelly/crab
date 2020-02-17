@@ -1,4 +1,6 @@
-<program> ::= <stmt>* ;
+<program> ::= <defn>* ;
+<defn> ::= <stmt> | <fn_def> ;
+<fn_def> ::= "fn" <ident> "(" (<ident> ("," <ident>)*)? ")" <block> ;
 <stmt> ::= <comment>
          | "print" <expr> ";"
          | "if" "(" <expr> ")" <block> ["else" <block>]
@@ -14,6 +16,7 @@
          | <binary_expr> 
          | '(' <expr> ')'
          | '"' [^"] '"'
+         | <ident> '(' (<expr> (',' <expr>)*)? ')'
          ;
 <ident> ::= \w(\w\d)+ ;
 <int> ::= \d+ ;

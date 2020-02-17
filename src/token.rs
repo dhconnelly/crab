@@ -10,6 +10,8 @@ pub enum TokenType {
     Else,
     True,
     False,
+    Func,
+    Return,
     LeftParen,
     RightParen,
     LeftBrace,
@@ -17,10 +19,12 @@ pub enum TokenType {
     Semicolon,
     Eq,
     EqEq,
+    Less,
     Star,
     Slash,
     Plus,
     Minus,
+    Comma,
 }
 
 #[derive(Debug)]
