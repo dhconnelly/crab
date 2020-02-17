@@ -10,6 +10,8 @@ pub enum ExecutionError {
     TypeMismatch { want: Type, got: TypedValue },
     InvalidGlobal(usize),
     StackOutOfBounds(usize),
+    ArgumentCountMismatch(String, usize, usize),
+    BadFunction(String),
 }
 use ExecutionError::*;
 
@@ -132,9 +134,18 @@ impl TypedValue {
     }
 }
 
+struct Function {
+    name: String,
+    addr: usize,
+    params: usize,
+}
+
 struct VM<'a> {
     stack: Vec<TypedValue>,
+    sps: Vec<usize>,
     globals: HashMap<usize, TypedValue>,
+    functions: HashMap<String, Function>,
+    returns: Vec<usize>,
     code: &'a [Instr],
     pc: usize,
 }
@@ -143,9 +154,12 @@ impl VM<'_> {
     fn new(code: &[Instr]) -> VM {
         VM {
             stack: Vec::new(),
+            sps: Vec::new(),
             globals: HashMap::new(),
             code,
             pc: 0,
+            returns: Vec::new(),
+            functions: HashMap::new(),
         }
     }
 
@@ -181,15 +195,50 @@ impl VM<'_> {
         use Instr::*;
         let instr = &self.code[self.pc];
         match instr {
+            Call(name, args) => match self.functions.get(name) {
+                None => return Err(BadFunction(name.to_string())),
+                Some(func) if func.params != *args => {
+                    return Err(ArgumentCountMismatch(name.to_string(), func.params, *args));
+                }
+                Some(func) => {
+                    self.returns.push(self.pc);
+                    self.pc = func.addr;
+                    self.sps.push(self.stack.len());
+                }
+            },
+
+            Def(name, params) => {
+                self.functions.insert(
+                    name.to_string(),
+                    Function {
+                        name: name.to_string(),
+                        params: *params,
+                        addr: self.pc,
+                    },
+                );
+            }
+
+            Return => {
+                let addr = self.returns.pop().expect("no return address!");
+                self.pc = addr;
+                let retval = self.pop_val()?;
+                if let Some(sp) = self.sps.pop() {
+                    self.stack.truncate(sp);
+                }
+                self.stack.push(retval);
+            }
+
             GetStack(i) => {
-                let val = self.stack.get(*i).ok_or(StackOutOfBounds(*i))?.clone();
+                let i = self.sps.last().unwrap_or(&0) + i;
+                let val = self.stack.get(i).ok_or(StackOutOfBounds(i))?.clone();
                 self.stack.push(val);
                 self.pc += 1;
             }
 
             SetStack(i) => {
+                let i = self.sps.last().unwrap_or(&0) + i;
                 let val = self.pop_val()?;
-                let cur = self.stack.get_mut(*i).ok_or(StackOutOfBounds(*i))?;
+                let cur = self.stack.get_mut(i).ok_or(StackOutOfBounds(i))?;
                 *cur = val;
                 self.pc += 1;
             }

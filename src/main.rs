@@ -17,6 +17,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let tree = parser::parse(toks)?;
     println!("{:#?}", tree);
     let code = compiler::compile(&tree)?;
+    println!("{:#?}", code);
     vm::execute(&code)?;
     Ok(())
 }

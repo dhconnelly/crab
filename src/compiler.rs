@@ -30,11 +30,17 @@ impl error::Error for CompileError {
 
 type Result<T> = result::Result<T, CompileError>;
 
+struct CallFrame {
+    callee: String,
+    depth: usize,
+}
+
 struct Compiler {
     instrs: Vec<Instr>,
     globals: HashMap<String, usize>,
     stack_frames: Vec<HashMap<String, usize>>,
     stack_depth: usize,
+    call_stack: Vec<CallFrame>,
 }
 
 impl Compiler {
@@ -44,6 +50,7 @@ impl Compiler {
             globals: HashMap::new(),
             stack_frames: Vec::new(),
             stack_depth: 0,
+            call_stack: Vec::new(),
         }
     }
 
@@ -78,7 +85,20 @@ impl Compiler {
         }
     }
 
+    fn define_stack_rel(&mut self, ident: &str, offset: usize) {
+        let frame = self.stack_frames.last_mut().unwrap();
+        frame.insert(ident.to_string(), self.stack_depth - offset);
+    }
+
+    fn stack_base(&self) -> usize {
+        match self.call_stack.last() {
+            Some(frame) => frame.depth,
+            None => 0,
+        }
+    }
+
     fn define(&mut self, ident: &str) {
+        let stack_base = self.stack_base();
         match self.stack_frames.last_mut() {
             None => {
                 let i = self.globals.len();
@@ -86,7 +106,7 @@ impl Compiler {
                 self.instrs.push(SetGlobal(i));
             }
             Some(frame) => {
-                frame.insert(ident.to_string(), self.stack_depth);
+                frame.insert(ident.to_string(), self.stack_depth - stack_base);
                 self.stack_depth += 1;
             }
         }
@@ -110,10 +130,16 @@ impl Compiler {
     }
 
     fn find_frame(&self, ident: &str) -> Option<&HashMap<String, usize>> {
+        let min_depth = &match self.call_stack.last() {
+            None => 0,
+            Some(frame) => frame.depth,
+        };
         self.stack_frames
             .iter()
+            .enumerate()
             .rev()
-            .find(|m| m.contains_key(ident))
+            .find(|(depth, m)| depth >= min_depth && m.contains_key(ident))
+            .map(|(depth, m)| m)
     }
 
     fn get(&mut self, ident: &str) -> Result<()> {
@@ -141,7 +167,7 @@ impl Compiler {
             Str(val) => self.instrs.push(PushStr(val.clone())),
             UnaryExpr(op, expr) => self.unary_expr(*op, expr)?,
             BinaryExpr { op, left, right } => self.binary_expr(*op, left, right)?,
-            CallExpr(callee, args) => panic!("not implemented: CallExpr"),
+            CallExpr(callee, args) => self.call(callee, args)?,
         }
         Ok(())
     }
@@ -161,6 +187,57 @@ impl Compiler {
         let frame = self.stack_frames.pop();
         self.instrs.push(PopStack(frame.as_ref().unwrap().len()));
         self.stack_depth = self.stack_depth - frame.unwrap().len();
+    }
+
+    fn push_call(&mut self, callee: &str) {
+        self.call_stack.push(CallFrame {
+            callee: callee.to_string(),
+            depth: self.stack_depth,
+        });
+    }
+
+    fn call(&mut self, callee: &str, args: &Vec<Expr>) -> Result<()> {
+        for arg in args {
+            self.expr(arg)?;
+        }
+        self.instrs.push(Call(callee.to_string(), args.len()));
+        Ok(())
+    }
+
+    fn return_stmt(&mut self, expr: &Expr) -> Result<()> {
+        self.expr(expr)?;
+        self.instrs.push(Return);
+        Ok(())
+    }
+
+    fn fn_def(&mut self, name: &str, params: &[String], body: &Block) -> Result<()> {
+        self.instrs.push(Def(name.to_string(), params.len()));
+        self.call_stack.push(CallFrame {
+            callee: name.to_string(),
+            depth: self.stack_depth,
+        });
+        self.push_frame();
+        for (i, param) in params.iter().rev().enumerate() {
+            self.define_stack_rel(param, i);
+        }
+        let Block(stmts) = body;
+        for stmt in stmts {
+            self.stmt(stmt)?;
+        }
+        if !stmts
+            .last()
+            .map(|stmt| match stmt {
+                Stmt::ReturnStmt(_) => true,
+                _ => false,
+            })
+            .unwrap_or(false)
+        {
+            self.instrs.push(PushInt(0));
+            self.instrs.push(Return);
+        }
+        self.pop_frame();
+        self.call_stack.pop().unwrap();
+        Ok(())
     }
 
     fn stmt(&mut self, stmt: &Stmt) -> Result<()> {
@@ -212,13 +289,8 @@ impl Compiler {
                 self.instrs.push(PopStack(1));
             }
 
-            FnDefStmt(name, params, body) => {
-                panic!("not implemented: FnDefStmt");
-            }
-
-            ReturnStmt(expr) => {
-                panic!("not implemented: ReturnStmt");
-            }
+            FnDefStmt(name, params, body) => self.fn_def(name, params, body)?,
+            ReturnStmt(expr) => self.return_stmt(expr)?,
         }
         Ok(())
     }

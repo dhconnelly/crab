@@ -228,14 +228,11 @@ impl<'a> Parser<'a> {
         self.next().unwrap();
         let tok = self.next()?;
         let right = self.add_expr(tok)?;
-        println!("found right: {:?}", right);
         Ok(Expr::binary(op, Box::new(left), Box::new(right)))
     }
 
     fn comp_expr(&mut self, tok: Token<'_>) -> Result<Expr> {
         let mut left = self.add_expr(tok)?;
-        println!("initial left: {:?}", left);
-        println!("next: {:?}", self.peek());
         while !self.at_end() {
             let tok = self.peek()?;
             left = match tok.typ {
@@ -243,15 +240,12 @@ impl<'a> Parser<'a> {
                 Less => self.binary_op(BinaryOp::Less, left)?,
                 _ => break,
             };
-            println!("new left: {:?}", left);
         }
-        println!("finished left: {:?}", left);
         Ok(left)
     }
 
     fn expr(&mut self, tok: Token<'_>) -> Result<Expr> {
         let expr = self.comp_expr(tok)?;
-        println!("got expr: {:?}", expr);
         Ok(expr)
     }
 

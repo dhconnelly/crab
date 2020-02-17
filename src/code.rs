@@ -20,4 +20,7 @@ pub enum Instr {
     Jump,
     JumpIfNot,
     PushCur,
+    Call(String, usize),
+    Def(String, usize),
+    Return,
 }

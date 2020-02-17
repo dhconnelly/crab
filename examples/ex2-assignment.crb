@@ -4,26 +4,26 @@ let y = 17;
 
 if (x == 5) {
   let y = 9;
-  print(y - x);
+  print(y - x); // 4
   let x = 7;
   if (true == true) {
     let w = x;
     x = 6;
-    print(y - w);
-    print(y - x);
+    print(y - w); // 2
+    print(y - x); // 3
     false;
   }
 
-  print(y - x);
+  print(y - x); // 3
   let z = "foo";
-  print(z);
+  print(z); // "foo"
   if (z == "bar") {
     print(false);
   } else {
     z = "baz";
-    print(z == "baz");
+    print(z == "baz"); // true
   }
 }
 
 y = 16;
-print(y - x);
+print(y - x); // 11
