@@ -1,2 +1,15 @@
 crab
 ====
+
+A small, dynamically-typed, garbage-collected scripting language. Basic
+control flow, integers, functions, strings, vectors and simple I/O is about
+all you get. Passing arguments to functions as well as assignment are by
+value, but string and vector values are just fat pointers to heap data, so
+passing and copying them is cheap. Mark-and-sweep is used for garbage
+collection and is triggered when there's not enough heap space to allocate new
+memory.
+
+To compile and execute a script stored in `filename.crb`:
+
+    cargo run filename.crb
+
