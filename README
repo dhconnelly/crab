@@ -9,6 +9,18 @@ passing and copying them is cheap. Mark-and-sweep is used for garbage
 collection and is triggered when there's not enough heap space to allocate new
 memory.
 
+Status: heap stuff isn't implemented and I'm sufficiently happy with having
+done compilation for the first time that I'm moving on to something new. Will
+come back to heap data and GC later, but most likely not in this project :)
+
+TODO:
+
+- heap
+- strings
+- vectors
+- garbage collection
+- read()
+
 To compile and execute a script stored in `filename.crb`:
 
     cargo run filename.crb
