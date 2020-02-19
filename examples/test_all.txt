@@ -1,0 +1,39 @@
+executing: examples/ex1-print.crb
+-6
+false
+true
+29
+true
+executing: examples/ex2-assignment.crb
+4
+2
+3
+3
+foo
+true
+11
+executing: examples/ex3-strings.crb
+hello, world!
+test #1
+test #2
+equality is working
+executing: examples/ex4-functions.crb
+-3
+executing: examples/ex5-conditions.crb
+5
+true
+-11
+executing: examples/ex7-loops.crb
+1
+1
+1
+2
+6
+24
+3628800
+executing: examples/fib.crb
+-1
+0
+1
+1
+55
